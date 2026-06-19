@@ -109,8 +109,55 @@
     flex-direction:column;
     gap:5px;
     cursor:pointer;
+    z-index: 110;
   }
-  .menu-toggle span{ width:24px; height:2px; background:var(--red); }
+  .menu-toggle span{
+    width:24px;
+    height:2px;
+    background:var(--red);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-toggle.active span:nth-child(1){ transform: translateY(7px) rotate(45deg); }
+  .menu-toggle.active span:nth-child(2){ opacity: 0; }
+  .menu-toggle.active span:nth-child(3){ transform: translateY(-7px) rotate(-45deg); }
+
+  .nav-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    z-index: 99;
+  }
+  .nav-overlay.show{ opacity: 1; pointer-events: auto; }
+
+  .flyer-zoom{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 200;
+    padding: 8%;
+  }
+  .flyer-zoom.show{ opacity: 1; pointer-events: auto; }
+  .flyer-zoom img{
+    max-width: 92vw;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transform: scale(0.92);
+    transition: transform 0.3s ease;
+  }
+  .flyer-zoom.show img{ transform: scale(1); }
 
   /* HERO */
   .hero{
@@ -136,7 +183,7 @@
 
   .hero-logo{
     width: min(820px, 88vw);
-    height: 320px;
+    height: min(320px, 38vh);
   }
 
   .hero-logo img{ object-fit: contain; }
@@ -171,8 +218,7 @@
     text-align: left;
     max-width: none;
     margin: 0;
-    padding: 170px 0 150px;
-    background: var(--red);
+    padding: 110px 0 90px;
   }
 
   #label .band-inner{
@@ -182,21 +228,19 @@
     box-sizing: border-box;
   }
 
-  #label .section-title{ color: #fff; }
-
   #label p{
     font-weight: 200;
     font-size: clamp(1.1rem, 2.2vw, 1.6rem);
     line-height: 1.7;
-    color: #fff;
-    max-width: 800px;
-    margin: 0 auto;
-    text-align: center;
+    text-align: justify;
+    text-justify: inter-word;
   }
 
   #label p strong{ font-weight: 700; }
 
   /* EVENTOS */
+  #events{ padding-top: 70px; padding-bottom: 50px; }
+
   .events-grid{
     display:grid;
     grid-template-columns: repeat(2, 1fr);
@@ -275,6 +319,47 @@
     color: var(--red-dim);
   }
 
+  .past-events-label{
+    font-weight: 300;
+    font-size: clamp(0.8rem, 1.6vw, 1rem);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--red-dim);
+    margin: 50px 0 28px;
+  }
+
+  .past-events-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .past-events-marquee{ display:none; }
+
+  .past-events-track{
+    display:flex;
+    width: 200%;
+  }
+
+  .past-events-track .placeholder{
+    flex: 0 0 25%;
+    aspect-ratio: 4/5;
+    border: none;
+    border-radius: 2px;
+    position: relative;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .past-events-track .placeholder:hover,
+  .past-events-track .placeholder:active{
+    transform: scale(1.08);
+    z-index: 5;
+    box-shadow: 0 10px 26px rgba(162,3,26,0.3);
+  }
+
   @keyframes teaseIn{
     to{ opacity: 1; transform: translateY(0); }
   }
@@ -290,7 +375,7 @@
   }
 
   /* GALERIA */
-  #gallery{ max-width: none; padding-left: 0; padding-right: 0; }
+  #gallery{ max-width: none; padding-left: 0; padding-right: 0; padding-top: 50px; }
   #gallery .section-title{
     max-width: 1400px;
     margin-left: auto;
@@ -303,15 +388,13 @@
   .gallery-row{
     overflow: hidden;
     padding: 16px 0;
+    touch-action: pan-y;
   }
 
   .gallery-track{
     display: flex;
     width: 200%;
   }
-
-  .gallery-track-1{ animation: scrollRight 70s linear infinite; }
-  .gallery-track-2{ animation: scrollLeft 70s linear infinite; }
 
   .gallery-track .placeholder{
     flex: 0 0 12.5%;
@@ -324,20 +407,279 @@
     transition: transform 0.35s ease, box-shadow 0.35s ease;
   }
 
-  .gallery-track .placeholder:hover{
+  .gallery-track .placeholder:hover,
+  .gallery-track .placeholder:active{
     transform: scale(1.08);
     z-index: 5;
     box-shadow: 0 10px 26px rgba(162,3,26,0.3);
   }
 
-  @keyframes scrollLeft{
-    from{ transform: translateX(0); }
-    to{ transform: translateX(-50%); }
+  /* RELEASES */
+  #releases{
+    max-width: none;
+    padding: 70px 0 110px;
+    background: #000;
+  }
+  #releases .section-title{
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 8%;
+    padding-right: 8%;
+    box-sizing: border-box;
+    color: #fff;
   }
 
-  @keyframes scrollRight{
-    from{ transform: translateX(-50%); }
-    to{ transform: translateX(0); }
+  .releases-wrap{ position: relative; }
+
+  .releases-row{ overflow: hidden; padding: 16px 0; cursor: grab; touch-action: pan-y; }
+  .releases-row.dragging{ cursor: grabbing; }
+
+  .releases-track{
+    display: flex;
+    width: 200%;
+  }
+
+  .releases-track .placeholder{
+    flex: 0 0 7.1429%;
+    aspect-ratio: 1/1;
+    border: none;
+    border-radius: 0;
+    outline: 1px solid var(--line);
+    outline-offset: -1px;
+    position: relative;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .releases-track .placeholder:hover,
+  .releases-track .placeholder:active{
+    transform: scale(1.08);
+    z-index: 5;
+    box-shadow: 0 10px 26px rgba(162,3,26,0.3);
+  }
+
+  .releases-track .listen-overlay{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(60,60,60,0.4);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  .releases-track .placeholder:hover .listen-overlay{
+    opacity: 1;
+  }
+
+  .new-release-card{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 19%;
+    aspect-ratio: 1/1;
+    z-index: 10;
+    border: 1px solid var(--red);
+    border-radius: 4px;
+    box-shadow: 0 22px 48px rgba(162,3,26,0.35);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .new-release-card:hover{
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow: 0 28px 56px rgba(162,3,26,0.45);
+  }
+
+  .new-release-card img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 3px;
+    display: block;
+  }
+
+  .new-release-card .listen-overlay{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(60,60,60,0.4);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  .new-release-card:hover .listen-overlay{
+    opacity: 1;
+  }
+
+  .new-release-tag{
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    z-index: 2;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, var(--red-dark) 0%, #ff5a76 50%, var(--red-dark) 100%);
+    background-size: 220% 100%;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 2px;
+    white-space: nowrap;
+    animation: shimmer 2.6s linear infinite, tagGlow 2.6s ease-in-out infinite;
+  }
+
+  @keyframes tagGlow{
+    0%, 100%{ box-shadow: 0 0 6px rgba(162,3,26,0.35); }
+    50%{ box-shadow: 0 0 16px rgba(255,90,118,0.85); }
+  }
+
+  /* RADIO SHOWS */
+  #radio-shows{
+    max-width: none;
+    padding: 50px 0 80px;
+    background: #000;
+  }
+  #radio-shows .section-title{
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 8%;
+    padding-right: 8%;
+    box-sizing: border-box;
+    color: #fff;
+  }
+
+  .radioshows-wrap{ position: relative; }
+
+  .radioshows-row{ overflow: hidden; padding: 16px 0; cursor: grab; touch-action: pan-y; }
+  .radioshows-row.dragging{ cursor: grabbing; }
+
+  .radioshows-track{
+    display: flex;
+    width: max-content;
+  }
+
+  .radioshows-track .placeholder{
+    flex: 0 0 auto;
+    height: 460px;
+    aspect-ratio: 4/5;
+    border: none;
+    border-radius: 0;
+    outline: 1px solid var(--line);
+    outline-offset: -1px;
+    position: relative;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .radioshows-track .placeholder:hover,
+  .radioshows-track .placeholder:active{
+    transform: scale(1.08);
+    z-index: 5;
+    box-shadow: 0 10px 26px rgba(162,3,26,0.3);
+  }
+
+  .radioshows-track .listen-overlay{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(60,60,60,0.4);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  .radioshows-track .placeholder:hover .listen-overlay{
+    opacity: 1;
+  }
+
+  .latest-show-card{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 380px;
+    aspect-ratio: 4/5;
+    z-index: 10;
+    border: 1px solid var(--red);
+    border-radius: 4px;
+    box-shadow: 0 22px 48px rgba(162,3,26,0.35);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .latest-show-card:hover{
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow: 0 28px 56px rgba(162,3,26,0.45);
+  }
+
+  .latest-show-card img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 3px;
+    display: block;
+  }
+
+  .latest-show-card .listen-overlay{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(60,60,60,0.4);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  .latest-show-card:hover .listen-overlay{
+    opacity: 1;
+  }
+
+  .latest-show-tag{
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    z-index: 2;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, var(--red-dark) 0%, #ff5a76 50%, var(--red-dark) 100%);
+    background-size: 220% 100%;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 2px;
+    white-space: nowrap;
+    animation: shimmer 2.6s linear infinite, tagGlow 2.6s ease-in-out infinite;
   }
 
   /* MERCH */
@@ -379,6 +721,28 @@
     box-shadow: 0 16px 34px rgba(162,3,26,0.3);
   }
 
+  .catalog-strip{
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: translateY(100%);
+    background: rgba(162,3,26,0.88);
+    color: #fff;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 0;
+    transition: transform 0.35s ease;
+  }
+
+  .merch-item .placeholder:hover .catalog-strip,
+  .merch-item .placeholder:active .catalog-strip{
+    transform: translateY(0);
+  }
+
   .merch-item .placeholder.coming-soon{
     border: none;
     background: none;
@@ -402,33 +766,117 @@
     font-weight: 800;
   }
 
+  .sold-out-title{
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    text-decoration-thickness: 2px;
+  }
+
+  .sold-out-tag{
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* VIDEO SETS */
+  .video-grid{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+
+  .video-item{
+    position: relative;
+    display: block;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .video-item:hover{
+    transform: scale(1.03);
+    box-shadow: 0 16px 34px rgba(162,3,26,0.3);
+  }
+
+  .video-item img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .video-play-btn{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(162,3,26,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+
+  .video-item:hover .video-play-btn{
+    background: var(--red-dark);
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+
+  .video-play-btn::before{
+    content: "";
+    border-style: solid;
+    border-width: 12px 0 12px 20px;
+    border-color: transparent transparent transparent #fff;
+    margin-left: 4px;
+  }
+
   /* CONTACT */
   #contact{
+    max-width: none;
     background: var(--bg-soft);
     border-top: 1px solid var(--line);
     text-align: left;
+    padding: 45px 0;
+  }
+
+  #contact .band-inner{
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 8%;
+    box-sizing: border-box;
   }
 
   #contact .section-title{
     text-align: center;
     font-size: clamp(2rem, 5vw, 3.2rem);
+    margin-bottom: 22px;
   }
 
   .contact-intro p{
-    margin: 18px auto 0;
+    margin: 12px auto 0;
     color: var(--red-dim);
     font-weight: 300;
     line-height: 1.6;
-    max-width: 480px;
+    max-width: 540px;
     text-align: center;
   }
 
   form{
     display:flex;
     flex-direction:column;
-    gap: 18px;
-    max-width: 480px;
-    margin: 40px auto 0;
+    gap: 22px;
+    max-width: 560px;
+    margin: 30px auto 0;
     text-align: left;
   }
 
@@ -473,7 +921,7 @@
 
   .form-status{
     display: none;
-    max-width: 480px;
+    max-width: 560px;
     margin: 18px auto 0;
     text-align: center;
     font-size: 0.9rem;
@@ -525,16 +973,96 @@
   footer .legal a:hover{ color: var(--red); }
 
   @media (max-width: 860px){
-    nav ul{ display:none; }
-    .menu-toggle{ display:flex; }
-    #merch{ display:none; }
+    .section-title{ text-align: center; margin-bottom: 30px; }
+    #events{ padding-bottom: 35px; }
+    #merch{ padding: 50px 0 70px; }
+    #video-sets{ padding-top: 50px; }
+    #video-sets .section-title{ text-align: center; }
+    header{ padding: 16px 5%; }
+    .logo-mark{
+      width: 160px;
+      height: 64px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    nav ul{
+      display:flex;
+      flex-direction:column;
+      position:fixed;
+      top:0;
+      right:0;
+      height:100vh;
+      width:min(70vw, 260px);
+      background:#ffffff;
+      padding:100px 30px 40px;
+      gap:26px;
+      list-style:none;
+      border-left: 1px solid var(--line);
+      box-shadow: -14px 0 30px rgba(0,0,0,0.12);
+      transform: translateX(100%);
+      transition: transform 0.35s ease;
+      z-index: 105;
+    }
+    nav ul.nav-open{ transform: translateX(0); }
+    .menu-toggle{ display:flex; margin-left:auto; }
+    .merch-grid{ grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .gallery-track .placeholder{ flex: 0 0 16.6667%; }
+    #releases{ padding: 32px 0 80px; }
+    .releases-row{ padding: 10px 0; }
+    .releases-track .placeholder{ flex: 0 0 19%; }
+    .new-release-card{ width: 24%; }
+    #radio-shows{ padding: 34px 0 65px; }
+    .radioshows-row{ padding: 10px 0; }
+    .radioshows-track .placeholder{ height: 430px; }
+    .latest-show-card{ height: 295px; }
+    .video-play-btn{ width: 56px; height: 56px; }
+    .video-play-btn::before{ border-width: 9px 0 9px 15px; }
   }
 
   @media (max-width: 560px){
     .events-grid{ grid-template-columns: 1fr; }
     section:not(.hero){ padding: 90px 6%; }
-    #label{ padding: 100px 0 90px; }
-    #merch{ padding: 90px 0; }
+    .section-title{ margin-bottom: 24px; }
+    #events{ padding-bottom: 30px; }
+    #label{ padding: 70px 0 60px; }
+    #label .section-title{ font-size: 1.1rem; }
+    #label p{ font-size: 1rem; line-height: 1.6; }
+    #merch{ padding: 36px 0 50px; }
+    .logo-mark{ width: 130px; height: 52px; }
+    .merch-grid{ grid-template-columns: 1fr; }
+    #video-sets{ padding-top: 36px; }
+    #video-sets .section-title{ text-align: center; }
+    .video-grid{ grid-template-columns: 1fr; gap: 18px; }
+    .video-play-btn{ width: 48px; height: 48px; }
+    .video-play-btn::before{ border-width: 8px 0 8px 13px; }
+    #gallery{ padding-top: 30px; padding-bottom: 55px; }
+    #gallery .section-title{ margin-bottom: 22px; }
+    .gallery-row{ padding: 6px 0; }
+    .gallery-track .placeholder{ flex: 0 0 30%; }
+    #releases{ padding: 24px 0 60px; }
+    .releases-row{ padding: 8px 0; }
+    .releases-track .placeholder{ flex: 0 0 32%; }
+    .new-release-card{ width: 40%; }
+    .new-release-tag{ font-size: 0.55rem; padding: 3px 9px; }
+    #radio-shows{ padding: 24px 0 50px; }
+    .radioshows-row{ padding: 8px 0; }
+    .radioshows-track .placeholder{ height: 300px; }
+    .latest-show-card{ height: 195px; }
+    .latest-show-tag{ font-size: 0.55rem; padding: 3px 9px; }
+    form button{ align-self: stretch; text-align: center; }
+    .past-events-grid{ display:none; }
+    .past-events-marquee{
+      display:block;
+      overflow:hidden;
+      padding: 6px 0;
+      margin-left: -6%;
+      margin-right: -6%;
+      cursor: grab;
+      touch-action: pan-y;
+    }
+    .past-events-marquee.dragging{ cursor: grabbing; }
+    .past-events-track .placeholder{ flex: 0 0 32%; }
   }
 </style>
 </head>
@@ -545,14 +1073,19 @@
   <nav>
     <ul>
       <li><a href="#label">Acerca de Nosotros</a></li>
+      <li><a href="#releases">Releases</a></li>
       <li><a href="#events">Eventos</a></li>
+      <li><a href="#radio-shows">Radio Shows</a></li>
       <li><a href="#gallery">Gallery</a></li>
       <li><a href="#merch">Merch</a></li>
+      <li><a href="#video-sets">Video Sets</a></li>
       <li><a href="#contact">Colaboraciones</a></li>
     </ul>
   </nav>
   <div class="menu-toggle" id="menuToggle"><span></span><span></span><span></span></div>
 </header>
+<div class="nav-overlay" id="navOverlay"></div>
+<div class="flyer-zoom" id="flyerZoom"><img id="flyerZoomImg" src="" alt="Flyer"></div>
 
 <section class="hero" id="home">
   <div class="placeholder"><img src="assets/fondo.jpg" alt="Ruby Haze"></div>
@@ -573,6 +1106,35 @@
   </div>
 </section>
 
+<section id="releases">
+  <h2 class="section-title">Releases</h2>
+  <div class="releases-wrap">
+    <div class="releases-row">
+      <div class="releases-track">
+        <a href="https://fanlink.tv/RHZ003" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/blla.png" alt="Blla"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/mAzPHp5x4f" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/feel%20real.jpg" alt="Feel Real"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZ001" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/i%20need%20your%20love.png" alt="I Need Your Love"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/4gVmdSS_T_" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/just%20liek%20you.png" alt="Just Like You"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/42RaITuGUH" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/oh%20vex.png" alt="Oh Vex"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZ002" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/wish%20you%20well.png" alt="Wish You Well"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/y43yZxNQOV" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/ibiza.png" alt="Ibiza"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZ003" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/blla.png" alt="Blla"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/mAzPHp5x4f" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/feel%20real.jpg" alt="Feel Real"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZ001" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/i%20need%20your%20love.png" alt="I Need Your Love"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/4gVmdSS_T_" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/just%20liek%20you.png" alt="Just Like You"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/42RaITuGUH" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/oh%20vex.png" alt="Oh Vex"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZ002" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/wish%20you%20well.png" alt="Wish You Well"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/y43yZxNQOV" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/ibiza.png" alt="Ibiza"><span class="listen-overlay">Listen Now</span></a>
+      </div>
+    </div>
+    <a href="https://tr.ee/pid8Zmlney" target="_blank" rel="noopener" class="new-release-card">
+      <span class="new-release-tag">New Release</span>
+      <img src="assets/music/my%20eyes%20on%20you%20last%20release.png" alt="My Eyes On You — New Release">
+      <span class="listen-overlay">Listen Now</span>
+    </a>
+  </div>
+</section>
+
 <section id="events">
   <h2 class="section-title">Eventos</h2>
   <div class="events-grid">
@@ -580,17 +1142,63 @@
       <div class="tease-text">
         <span class="tease-line">Stay Tuned</span>
         <span class="tease-line tease-main">Next Event</span>
-        <span class="tease-line tease-sub">Available Soon — August</span>
+        <span class="tease-line tease-sub">August</span>
+        <span class="tease-line tease-sub">Tickets Available Soon</span>
       </div>
     </div>
+  </div>
+
+  <p class="past-events-label">Past Events</p>
+
+  <div class="past-events-grid">
     <div class="event-card placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
     <div class="event-card placeholder"><img src="assets/evento-2.png" alt="Evento"></div>
+  </div>
+
+  <div class="past-events-marquee">
+    <div class="past-events-track" id="pastEventsTrack">
+      <div class="placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
+      <div class="placeholder"><img src="assets/evento-2.png" alt="Evento"></div>
+      <div class="placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
+      <div class="placeholder"><img src="assets/evento-2.png" alt="Evento"></div>
+    </div>
+  </div>
+</section>
+
+<section id="radio-shows">
+  <h2 class="section-title">Radio Shows</h2>
+  <div class="radioshows-wrap">
+    <div class="radioshows-row">
+      <div class="radioshows-track">
+        <a href="https://fanlink.tv/RHZRS001" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow1.jpg" alt="Radio Show 1"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS002" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show%202.jpg" alt="Radio Show 2"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS003" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow3.jpg" alt="Radio Show 3"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS004" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow4.jpg" alt="Radio Show 4"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS005" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow5.jpg" alt="Radio Show 5"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS006" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show6.jpg" alt="Radio Show 6"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS007" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show7.jpg" alt="Radio Show 7"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS008" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow8.jpg" alt="Radio Show 8"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS001" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow1.jpg" alt="Radio Show 1"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS002" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show%202.jpg" alt="Radio Show 2"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS003" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow3.jpg" alt="Radio Show 3"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS004" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow4.jpg" alt="Radio Show 4"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS005" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow5.jpg" alt="Radio Show 5"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS006" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show6.jpg" alt="Radio Show 6"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS007" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show7.jpg" alt="Radio Show 7"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS008" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow8.jpg" alt="Radio Show 8"><span class="listen-overlay">Listen Now</span></a>
+      </div>
+    </div>
+    <a href="https://fanlink.tv/RHZRS009" target="_blank" rel="noopener" class="latest-show-card">
+      <span class="latest-show-tag">Latest Episode</span>
+      <img src="assets/radio-shows/radioshow9%20last%20release.jpg" alt="Radio Show 9 — New Episode">
+      <span class="listen-overlay">Listen Now</span>
+    </a>
   </div>
 </section>
 
 <section id="gallery">
   <h2 class="section-title">Gallery</h2>
-  <div class="gallery-row">
+  <div class="gallery-row" id="galleryRow1">
     <div class="gallery-track gallery-track-1">
       <div class="placeholder"><img src="assets/foto-3.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-1.jpg" alt=""></div>
@@ -602,7 +1210,7 @@
       <div class="placeholder"><img src="assets/foto-7.jpg" alt=""></div>
     </div>
   </div>
-  <div class="gallery-row">
+  <div class="gallery-row" id="galleryRow2">
     <div class="gallery-track gallery-track-2">
       <div class="placeholder"><img src="assets/foto-2.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-5.jpg" alt=""></div>
@@ -621,12 +1229,18 @@
     <h2 class="section-title">Merch</h2>
     <div class="merch-grid">
       <div class="merch-item">
-        <div class="placeholder"><img src="assets/merch-1.jpg" alt="Merch 001"></div>
-        <h3>Merch 001</h3>
+        <div class="placeholder">
+          <img src="assets/merch-1.jpg" alt="Merch 001">
+          <a href="assets/CATALOGOS%20ROPA/CATALOGO%20RHZ%20001.pdf" target="_blank" rel="noopener" class="catalog-strip">Ver Catálogo</a>
+        </div>
+        <h3><span class="sold-out-title">Merch 001</span><span class="sold-out-tag">Sold Out</span></h3>
       </div>
       <div class="merch-item">
-        <div class="placeholder"><img src="assets/merch-2.png" alt="Merch 002"></div>
-        <h3>Merch 002</h3>
+        <div class="placeholder">
+          <img src="assets/merch-2.png" alt="Merch 002">
+          <a href="assets/CATALOGOS%20ROPA/CATALOGO%20RHZ%20002.pdf" target="_blank" rel="noopener" class="catalog-strip">Ver Catálogo</a>
+        </div>
+        <h3><span class="sold-out-title">Merch 002</span><span class="sold-out-tag">Sold Out</span></h3>
       </div>
       <div class="merch-item">
         <div class="placeholder coming-soon"><span class="coming-soon-text">Available Soon</span></div>
@@ -636,32 +1250,48 @@
   </div>
 </section>
 
-<section id="contact">
-  <div class="contact-intro">
-    <h2 class="section-title">Colaboraciones</h2>
-    <p>
-      ¿Tienes un venue, quieres organizar un evento o buscas una colaboración con
-      Ruby Haze? Cuéntanos los detalles y te contactaremos.
-    </p>
+<section id="video-sets">
+  <h2 class="section-title">Video Sets</h2>
+  <div class="video-grid">
+    <a href="https://www.youtube.com/watch?v=RTqepoGPeJU" target="_blank" rel="noopener" class="video-item">
+      <img src="https://img.youtube.com/vi/RTqepoGPeJU/maxresdefault.jpg" alt="Ruby Haze Video Set">
+      <span class="video-play-btn"></span>
+    </a>
+    <a href="https://www.youtube.com/watch?v=ruAIK9ei5tE&t=97s" target="_blank" rel="noopener" class="video-item">
+      <img src="https://img.youtube.com/vi/ruAIK9ei5tE/maxresdefault.jpg" alt="Ruby Haze Video Set">
+      <span class="video-play-btn"></span>
+    </a>
   </div>
-  <form id="contactForm">
-    <input type="text" name="name" placeholder="Nombre" required>
-    <input type="email" name="email" placeholder="Correo electrónico" required>
-    <input type="tel" name="phone" placeholder="Teléfono (opcional)">
-    <select name="inquiry_type" required>
-      <option value="" disabled selected>Tipo de consulta</option>
-      <option value="venue">Tengo un venue</option>
-      <option value="evento">Quiero un evento</option>
-      <option value="colaboracion">Colaboración</option>
-      <option value="otro">Otro</option>
-    </select>
-    <textarea name="message" rows="4" placeholder="Cuéntanos más"></textarea>
-    <input type="hidden" name="access_key" value="6da871fd-2211-4b44-a3b8-1258cf288fdd">
-    <input type="hidden" name="subject" value="Nuevo mensaje desde rubyhazemusic.com">
-    <input type="hidden" name="from_name" value="Ruby Haze — Formulario web">
-    <button type="submit">Enviar</button>
-  </form>
-  <p id="formStatus" class="form-status"></p>
+</section>
+
+<section id="contact">
+  <div class="band-inner">
+    <div class="contact-intro">
+      <h2 class="section-title">Colaboraciones</h2>
+      <p>
+        ¿Tienes un venue, quieres organizar un evento, lanzar tu música con el sello
+        o ser parte de un radio show? Cuéntanos los detalles y te contactaremos.
+      </p>
+    </div>
+    <form id="contactForm">
+      <input type="text" name="name" placeholder="Nombre" required>
+      <input type="email" name="email" placeholder="Correo electrónico" required>
+      <input type="tel" name="phone" placeholder="Teléfono (opcional)">
+      <select name="inquiry_type" required>
+        <option value="" disabled selected>Tipo de consulta</option>
+        <option value="venue">Tengo un venue</option>
+        <option value="evento">Quiero un evento</option>
+        <option value="colaboracion">Colaboración</option>
+        <option value="otro">Otro</option>
+      </select>
+      <textarea name="message" rows="4" placeholder="Cuéntanos más"></textarea>
+      <input type="hidden" name="access_key" value="6da871fd-2211-4b44-a3b8-1258cf288fdd">
+      <input type="hidden" name="subject" value="Nuevo mensaje desde rubyhazemusic.com">
+      <input type="hidden" name="from_name" value="Ruby Haze — Formulario web">
+      <button type="submit">Enviar</button>
+    </form>
+    <p id="formStatus" class="form-status"></p>
+  </div>
 </section>
 
 <footer>
@@ -694,16 +1324,42 @@
 
   const toggle = document.getElementById('menuToggle');
   const navList = document.querySelector('nav ul');
+  const navOverlay = document.getElementById('navOverlay');
+
+  function closeMenu(){
+    navList.classList.remove('nav-open');
+    toggle.classList.remove('active');
+    navOverlay.classList.remove('show');
+  }
+
   toggle.addEventListener('click', () => {
-    navList.style.display = navList.style.display === 'flex' ? 'none' : 'flex';
-    navList.style.flexDirection = 'column';
-    navList.style.position = 'absolute';
-    navList.style.top = '64px';
-    navList.style.right = '5%';
-    navList.style.background = '#ffffff';
-    navList.style.padding = '20px';
-    navList.style.gap = '20px';
-    navList.style.border = '1px solid rgba(162,3,26,0.15)';
+    const isOpen = navList.classList.toggle('nav-open');
+    toggle.classList.toggle('active', isOpen);
+    navOverlay.classList.toggle('show', isOpen);
+  });
+  navOverlay.addEventListener('click', closeMenu);
+  navList.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeMenu);
+  });
+
+  const pastEventsTrack = document.getElementById('pastEventsTrack');
+  const pastEventsMarquee = document.querySelector('.past-events-marquee');
+  const flyerZoom = document.getElementById('flyerZoom');
+  const flyerZoomImg = document.getElementById('flyerZoomImg');
+
+  pastEventsTrack.querySelectorAll('img').forEach(img => {
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flyerZoomImg.src = img.src;
+      flyerZoomImg.alt = img.alt;
+      flyerZoom.classList.add('show');
+      pastEventsMarquee.classList.add('paused');
+    });
+  });
+
+  flyerZoom.addEventListener('click', () => {
+    flyerZoom.classList.remove('show');
+    pastEventsMarquee.classList.remove('paused');
   });
 
   const contactForm = document.getElementById('contactForm');
@@ -737,6 +1393,116 @@
       submitBtn.disabled = false;
     }
   });
+
+  function initDragMarquee(rowSelector, trackSelector, durationMs, options = {}){
+    const { reverse = false, touchOnly = false } = options;
+    const row = document.querySelector(rowSelector);
+    const track = document.querySelector(trackSelector);
+    if (!row || !track) return;
+
+    let halfWidth = track.scrollWidth / 2;
+    let pos = reverse ? -halfWidth : 0;
+    let speed = halfWidth / durationMs;
+    let isDown = false;
+    let isDragging = false;
+    let dragMoved = false;
+    let suppressClick = false;
+    let direction = null;
+    let startX = 0;
+    let startY = 0;
+    let startPos = 0;
+    let lastTime = null;
+
+    function wrap(p){
+      p = p % halfWidth;
+      if (p > 0) p -= halfWidth;
+      return p;
+    }
+
+    function step(timestamp){
+      if (lastTime === null) lastTime = timestamp;
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+      if (!isDragging && !row.classList.contains('paused')) {
+        pos = wrap(pos + (reverse ? speed * dt : -speed * dt));
+      }
+      track.style.transform = `translateX(${pos}px)`;
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+
+    function onPointerDown(e){
+      if (touchOnly && e.pointerType !== 'touch') return;
+      isDown = true;
+      dragMoved = false;
+      direction = null;
+      startX = e.clientX;
+      startY = e.clientY;
+      startPos = pos;
+    }
+
+    function onPointerMove(e){
+      if (!isDown) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (direction === null) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        direction = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        if (direction === 'x') {
+          isDragging = true;
+          row.classList.add('dragging');
+        }
+      }
+
+      if (direction !== 'x') return;
+      e.preventDefault();
+      if (Math.abs(dx) > 5) dragMoved = true;
+      pos = wrap(startPos + dx);
+    }
+
+    function onPointerUp(){
+      isDown = false;
+      if (isDragging) {
+        isDragging = false;
+        lastTime = null;
+        row.classList.remove('dragging');
+        if (dragMoved) suppressClick = true;
+      }
+      direction = null;
+    }
+
+    function onWheel(e){
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      pos = wrap(pos - e.deltaX);
+    }
+
+    row.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    if (!touchOnly) row.addEventListener('wheel', onWheel, { passive: false });
+    track.addEventListener('dragstart', e => e.preventDefault());
+    track.addEventListener('click', e => {
+      if (suppressClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        suppressClick = false;
+      }
+    }, true);
+
+    window.addEventListener('resize', () => {
+      halfWidth = track.scrollWidth / 2;
+      speed = halfWidth / durationMs;
+    });
+  }
+
+  initDragMarquee('.releases-row', '.releases-track', 65000);
+  initDragMarquee('.radioshows-row', '.radioshows-track', 65000);
+  initDragMarquee('.past-events-marquee', '.past-events-track', 18000, { reverse: true });
+  initDragMarquee('#galleryRow1', '.gallery-track-1', 70000, { reverse: true, touchOnly: true });
+  initDragMarquee('#galleryRow2', '.gallery-track-2', 70000, { touchOnly: true });
 </script>
 
 </body>
