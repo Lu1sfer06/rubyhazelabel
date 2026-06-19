@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruby Haze | Record Label</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@200;300;400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #ffffff;
+    --bg-soft: #fafafa;
+    --line: rgba(162,3,26,0.15);
+    --red: #a2031a;
+    --red-dim: rgba(162,3,26,0.55);
+    --red-dark: #7a0214;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    background: var(--bg);
+    color: var(--red);
+    font-family: 'Google Sans Flex', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  h1,h2,h3{
+    font-family: 'Google Sans Flex', sans-serif;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  .placeholder{
+    border: 1px dashed var(--line);
+    background: repeating-linear-gradient(45deg, rgba(162,3,26,0.02) 0 10px, rgba(162,3,26,0.05) 10px 20px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color: var(--red-dim);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* NAV */
+  header{
+    position: fixed;
+    top:0; left:0; right:0;
+    z-index: 100;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 18px 5%;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .logo-mark{
+    width: 130px;
+    height: 42px;
+    font-size: 0.65rem;
+  }
+
+  nav ul{
+    display:flex;
+    gap: 38px;
+    list-style:none;
+  }
+
+  nav a{
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color 0.25s;
+  }
+
+  nav a:hover{ color: var(--red-dark); }
+
+  .menu-toggle{
+    display:none;
+    flex-direction:column;
+    gap:5px;
+    cursor:pointer;
+  }
+  .menu-toggle span{ width:24px; height:2px; background:var(--red); }
+
+  /* HERO */
+  .hero{
+    position: relative;
+    height: 100vh;
+    width: 100%;
+  }
+
+  .hero .placeholder{
+    height: 100%;
+    width: 100%;
+  }
+
+  .hero-overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap: 8px;
+  }
+
+  .hero-logo{
+    width: min(520px, 70vw);
+    height: 180px;
+  }
+
+  .scroll-cue{
+    position:absolute;
+    bottom: 28px;
+    left:50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--red-dim);
+    text-transform: uppercase;
+  }
+
+  /* SECTIONS */
+  section{
+    padding: 120px 8%;
+    max-width: 1400px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .section-title{
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    margin-bottom: 50px;
+    text-align: left;
+  }
+
+  /* ABOUT / LABEL */
+  #label{ text-align: left; }
+
+  #label p{
+    font-weight: 200;
+    font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+    line-height: 1.7;
+    color: var(--red);
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  #label p strong{ font-weight: 700; }
+
+  /* EVENTOS */
+  .events-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .event-card{
+    aspect-ratio: 4/5;
+    border-radius: 2px;
+  }
+
+  .event-card.next{
+    grid-column: 1 / -1;
+    aspect-ratio: 16/9;
+    border: 1px dashed var(--red);
+    background: rgba(162,3,26,0.04);
+  }
+
+  /* GALERIA */
+  #gallery{ max-width: none; padding-left: 0; padding-right: 0; }
+  #gallery .section-title{
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 8%;
+    padding-right: 8%;
+    box-sizing: border-box;
+  }
+
+  .gallery-grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .gallery-grid .placeholder{
+    aspect-ratio: 1/1;
+    border: none;
+    border-radius: 0;
+    outline: 1px solid var(--line);
+    outline-offset: -1px;
+  }
+
+  /* MERCH */
+  #merch{ text-align: left; }
+
+  .merch-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+
+  .merch-item .placeholder{
+    aspect-ratio: 1/1;
+  }
+
+  .merch-item h3{
+    margin-top: 16px;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  /* CONTACT */
+  #contact{
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line);
+    text-align: left;
+  }
+
+  #contact .section-title{
+    text-align: center;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+  }
+
+  .contact-intro p{
+    margin: 18px auto 0;
+    color: var(--red-dim);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 480px;
+    text-align: center;
+  }
+
+  form{
+    display:flex;
+    flex-direction:column;
+    gap: 18px;
+    max-width: 480px;
+    margin: 40px auto 0;
+    text-align: left;
+  }
+
+  form input, form select, form textarea{
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    color: var(--red);
+    font-family: 'Google Sans Flex', sans-serif;
+    font-weight: 300;
+    font-size: 0.95rem;
+    padding: 12px 4px;
+    outline: none;
+  }
+
+  form select option{ background: var(--bg); }
+
+  form input::placeholder, form textarea::placeholder{ color: var(--red-dim); }
+
+  form input:focus, form select:focus, form textarea:focus{
+    border-bottom-color: var(--red);
+  }
+
+  form button{
+    margin-top: 10px;
+    align-self: flex-end;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    padding: 16px 38px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.25s;
+  }
+
+  form button:hover{ background: var(--red-dark); }
+
+  /* FOOTER */
+  footer{
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line);
+    padding: 50px 8% 40px;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    text-align: center;
+  }
+
+  .social-row{
+    display:flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .social-btn{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--red);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition: background 0.25s, color 0.25s;
+  }
+
+  .social-btn svg{ width: 19px; height: 19px; }
+
+  .social-btn:hover{ background: var(--red); color: #fff; }
+
+  footer .legal{
+    font-size: 0.72rem;
+    color: var(--red-dim);
+    letter-spacing: 0.03em;
+    max-width: 600px;
+  }
+
+  footer .legal a{ text-decoration: underline; }
+  footer .legal a:hover{ color: var(--red); }
+
+  @media (max-width: 860px){
+    nav ul{ display:none; }
+    .menu-toggle{ display:flex; }
+    .gallery-grid, .merch-grid{ grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 560px){
+    .events-grid{ grid-template-columns: 1fr; }
+    .gallery-grid, .merch-grid{ grid-template-columns: 1fr; }
+    section{ padding: 90px 6%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark placeholder">[ LOGO ]</div>
+  <nav>
+    <ul>
+      <li><a href="#label">Acerca de Nosotros</a></li>
+      <li><a href="#events">Eventos</a></li>
+      <li><a href="#gallery">Gallery</a></li>
+      <li><a href="#merch">Merch</a></li>
+      <li><a href="#contact">Tickets</a></li>
+    </ul>
+  </nav>
+  <div class="menu-toggle" id="menuToggle"><span></span><span></span><span></span></div>
+</header>
+
+<section class="hero" id="home">
+  <div class="placeholder">[ ESPACIO PARA VIDEO / IMAGEN PRINCIPAL ]</div>
+  <div class="hero-overlay">
+    <div class="hero-logo placeholder">[ LOGO RUBY HAZE ]</div>
+  </div>
+  <div class="scroll-cue">Desliza ↓</div>
+</section>
+
+<section id="label">
+  <h2 class="section-title">Acerca de Nosotros</h2>
+  <p>
+    <strong>RUBY HAZE</strong> es un sello discográfico de música electrónica fundado en 2023.
+    Más que un sello, somos un movimiento: producimos música, organizamos eventos y creamos
+    piezas propias de merch para una comunidad que vive la escena más allá de la pista de baile.
+  </p>
+</section>
+
+<section id="events">
+  <h2 class="section-title">Eventos</h2>
+  <div class="events-grid">
+    <div class="event-card next placeholder">[ NUEVO EVENTO — ESPACIO MÁS GRANDE ]</div>
+    <div class="event-card placeholder">[ FLYER 4:5 ]</div>
+    <div class="event-card placeholder">[ FLYER 4:5 ]</div>
+  </div>
+</section>
+
+<section id="gallery">
+  <h2 class="section-title">Gallery</h2>
+  <div class="gallery-grid">
+    <div class="placeholder">[ FOTO 1 ]</div>
+    <div class="placeholder">[ FOTO 2 ]</div>
+    <div class="placeholder">[ FOTO 3 ]</div>
+    <div class="placeholder">[ FOTO 4 ]</div>
+    <div class="placeholder">[ FOTO 5 ]</div>
+    <div class="placeholder">[ FOTO 6 ]</div>
+    <div class="placeholder">[ FOTO 7 ]</div>
+    <div class="placeholder">[ FOTO 8 ]</div>
+  </div>
+</section>
+
+<section id="merch">
+  <h2 class="section-title">Merch</h2>
+  <div class="merch-grid">
+    <div class="merch-item">
+      <div class="placeholder">[ FOTO PRODUCTO 1 ]</div>
+      <h3>Merch 001</h3>
+    </div>
+    <div class="merch-item">
+      <div class="placeholder">[ FOTO PRODUCTO 2 ]</div>
+      <h3>Merch 002</h3>
+    </div>
+    <div class="merch-item">
+      <div class="placeholder">[ FOTO PRODUCTO 3 ]</div>
+      <h3>Merch 003</h3>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="contact-intro">
+    <h2 class="section-title">Colaboraciones</h2>
+    <p>
+      ¿Tienes un venue, quieres organizar un evento o buscas una colaboración con
+      Ruby Haze? Cuéntanos los detalles y te contactaremos.
+    </p>
+  </div>
+  <form>
+    <input type="text" placeholder="Nombre" required>
+    <input type="email" placeholder="Correo electrónico" required>
+    <select required>
+      <option value="" disabled selected>Tipo de consulta</option>
+      <option value="venue">Tengo un venue</option>
+      <option value="evento">Quiero un evento</option>
+      <option value="colaboracion">Colaboración</option>
+      <option value="otro">Otro</option>
+    </select>
+    <textarea rows="4" placeholder="Cuéntanos más"></textarea>
+    <button type="submit">Enviar</button>
+  </form>
+</section>
+
+<footer>
+  <div class="social-row">
+    <a class="social-btn" href="https://linktr.ee/rubyhazemusic" target="_blank" rel="noopener" title="Linktree">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="6" y1="9" x2="18" y2="9"/><line x1="7.5" y1="14" x2="16.5" y2="14"/><path d="M12 4 L9 7 M12 4 L15 7"/><path d="M6 9 L9 12 M18 9 L15 12"/><path d="M7.5 14 L10 17 M16.5 14 L14 17"/></svg>
+    </a>
+    <a class="social-btn" href="https://instagram.com/rubyhaze____" target="_blank" rel="noopener" title="Instagram">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/></svg>
+    </a>
+    <a class="social-btn" href="#" target="_blank" rel="noopener" title="YouTube">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10.5 9.2 L15.5 12 L10.5 14.8 Z" fill="currentColor" stroke="none"/></svg>
+    </a>
+    <a class="social-btn" href="#" target="_blank" rel="noopener" title="SoundCloud">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 16h11a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.6-1.5A4 4 0 0 0 6 16Z"/><line x1="8" y1="13" x2="8" y2="16"/><line x1="10.5" y1="11.5" x2="10.5" y2="16"/></svg>
+    </a>
+    <a class="social-btn" href="#" title="Spotify">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M7 14.5c3.5-1.3 7-1 10 0.8"/><path d="M7.7 11.3c3-1.1 7.2-0.9 9.6 0.7"/><path d="M8.5 8.3c2.6-0.8 6-0.6 8 0.6"/></svg>
+    </a>
+    <a class="social-btn" href="#" title="Apple Music">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><circle cx="9.3" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.3" cy="13.8" r="1.3" fill="currentColor" stroke="none"/><path d="M10.6 15V8.8L16.6 7.6V13.8"/></svg>
+    </a>
+  </div>
+
+  <div class="legal">© <span id="year"></span> Ruby Haze. Todos los derechos reservados. · Contacto: <a href="mailto:maison@rubyhazelabel.com">maison@rubyhazelabel.com</a></div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  const toggle = document.getElementById('menuToggle');
+  const navList = document.querySelector('nav ul');
+  toggle.addEventListener('click', () => {
+    navList.style.display = navList.style.display === 'flex' ? 'none' : 'flex';
+    navList.style.flexDirection = 'column';
+    navList.style.position = 'absolute';
+    navList.style.top = '64px';
+    navList.style.right = '5%';
+    navList.style.background = '#ffffff';
+    navList.style.padding = '20px';
+    navList.style.gap = '20px';
+    navList.style.border = '1px solid rgba(162,3,26,0.15)';
+  });
+</script>
+
+</body>
+</html>
