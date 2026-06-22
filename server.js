@@ -46,6 +46,8 @@ function payphonePost(hostPath, payload) {
   });
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // La Cajita de Payphone hace el Prepare directo desde el navegador.
 // Aquí solo confirmamos el pago de forma segura contra la API real de Payphone.
 app.post('/api/payphone/confirm', async (req, res) => {
@@ -54,11 +56,20 @@ app.post('/api/payphone/confirm', async (req, res) => {
     return res.status(400).json({ error: 'Faltan datos de confirmación.' });
   }
 
+  const payload = { id: Number(id), clientTxId: clientTransactionId };
+
   try {
-    const { data } = await payphonePost('/api/button/V2/Confirm', {
-      id: Number(id),
-      clientTxId: clientTransactionId
-    });
+    let { data } = await payphonePost('/api/button/V2/Confirm', payload);
+
+    // Justo después del redirect, Payphone a veces todavía no terminó de
+    // resolver el estado interno de la transacción. Reintentamos un par de
+    // veces con una breve espera antes de darla por desconocida.
+    let attempts = 0;
+    while (!data.transactionStatus && attempts < 3) {
+      await sleep(1500);
+      ({ data } = await payphonePost('/api/button/V2/Confirm', payload));
+      attempts++;
+    }
 
     if (data.transactionStatus === 'Approved') {
       return res.json({
