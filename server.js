@@ -81,7 +81,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
         cardholderName: data.optionalParameter4
       });
     }
-    res.json({ success: false, status: data.transactionStatus || 'Desconocido' });
+    res.json({ success: false, status: data.transactionStatus || 'Desconocido', debug: data });
   } catch (err) {
     console.error('Payphone Confirm exception:', err);
     res.status(500).json({ error: 'Error de conexión con Payphone.' });
