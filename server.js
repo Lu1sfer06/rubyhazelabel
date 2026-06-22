@@ -23,8 +23,20 @@ const WEB3FORMS_ACCESS_KEY = '6da871fd-2211-4b44-a3b8-1258cf288fdd';
 
 const mailer = nodemailer.createTransport({
   service: 'gmail',
-  auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD }
+  auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  connectionTimeout: 8000,
+  greetingTimeout: 8000,
+  socketTimeout: 8000
 });
+
+// Protege contra llamadas externas (correo, webhook) que se queden colgadas:
+// nunca deben poder bloquear la respuesta al comprador más de `ms`.
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label}`)), ms))
+  ]);
+}
 
 // transactionId de pagos ya mostrados/confirmados. Cada enlace de
 // confirmación es de un solo uso: si alguien recarga, navega con
@@ -165,17 +177,15 @@ app.post('/api/payphone/confirm', async (req, res) => {
         cardholderName: data.optionalParameter4
       };
 
-      try {
-        await sendTicketEmail(ticket);
-      } catch (mailErr) {
+      // No deben bloquear la respuesta al comprador: se disparan en segundo
+      // plano y cada una está limitada por un timeout duro.
+      withTimeout(sendTicketEmail(ticket), 8000, 'sendTicketEmail').catch((mailErr) => {
         console.error('Error enviando el ticket por correo:', mailErr);
-      }
+      });
 
-      try {
-        await notifyAdmin(ticket);
-      } catch (notifyErr) {
+      withTimeout(notifyAdmin(ticket), 8000, 'notifyAdmin').catch((notifyErr) => {
         console.error('Error notificando al admin:', notifyErr);
-      }
+      });
 
       return res.json({ success: true, ...ticket });
     }

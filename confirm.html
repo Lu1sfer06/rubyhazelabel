@@ -190,15 +190,22 @@
     // Pequeña pausa para que el efecto de carga se sienta suave, no instantáneo.
     const minWait = new Promise(r => setTimeout(r, 900));
 
+    // Nunca dejar al usuario viendo el spinner para siempre, sin importar
+    // qué tan lento responda el servidor.
+    const controller = new AbortController();
+    const hardTimeout = setTimeout(() => controller.abort(), 20000);
+
     try{
       const [res] = await Promise.all([
         fetch('/api/payphone/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, clientTransactionId })
+          body: JSON.stringify({ id, clientTransactionId }),
+          signal: controller.signal
         }),
         minWait
       ]);
+      clearTimeout(hardTimeout);
       const data = await res.json();
 
       if(data.success){
