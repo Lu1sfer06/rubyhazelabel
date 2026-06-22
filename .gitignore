@@ -2,3 +2,4 @@
 assets/CATALOGOS ROPA/
 .env
 node_modules/
+tickets-db.json

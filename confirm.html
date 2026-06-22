@@ -191,9 +191,9 @@
         Contacto 2
       </a>
     </div>
-    <a class="btn-home" id="homeBtn" href="ticketsTHETRIBEPTII.html" style="display:none;">Volver al inicio</a>
+    <a class="btn-home" id="homeBtn" href="ticketsTHETRIBEPTII" style="display:none;">Volver al inicio</a>
     <br>
-    <a class="back-link" id="backLink" href="ticketsTHETRIBEPTII.html" style="display:none;">&larr; Volver a la página del ticket</a>
+    <a class="back-link" id="backLink" href="ticketsTHETRIBEPTII" style="display:none;">&larr; Volver a la página del ticket</a>
   </div>
 
 </main>
@@ -230,6 +230,7 @@
     formData.append('email', ticket.email || '');
     formData.append('payment_method', 'tarjeta (Payphone)');
     formData.append('transaction_id', ticket.transactionId || '');
+    formData.append('quantity', ticket.quantity || 1);
     formData.append('event', EVENT_NAME);
 
     fetch('https://api.web3forms.com/submit', {
@@ -276,20 +277,24 @@
     setTimeout(() => confetti({ particleCount: 70, spread: 130, origin: { y: 0.3 }, colors: ['#dbce44', '#ffffff'] }), 300);
   }
 
-  function setIntro(){
-    statusIntro.innerHTML = 'Confirmamos tu asistencia para el evento <span style="color:var(--yellow);">THE TRIBE PT.II el sábado 01 de agosto a las 9pm en Kuno Seafood Rooftop, Portoviejo.</span>';
+  function setIntro(quantity){
+    const asistencia = quantity > 1 ? `tus ${quantity} asistencias` : 'tu asistencia';
+    statusIntro.innerHTML = `Confirmamos ${asistencia} para el evento <span style="color:var(--yellow);">THE TRIBE PT.II el sábado 01 de agosto a las 9pm en Kuno Seafood Rooftop, Portoviejo.</span>`;
     statusIntro.style.display = 'block';
   }
 
   async function confirmPayment(){
     // Atajos solo para previsualizar diseños sin una compra real.
     if(params.get('preview') === '1'){
+      const previewQty = Math.max(1, parseInt(params.get('qty'), 10) || 1);
       fireConfetti();
       brandLogos.style.display = 'flex';
       statusTitle.textContent = 'GRACIAS POR TU COMPRA';
-      setIntro();
-      statusMessage.textContent = 'En breve enviaremos tu ticket al correo que nos otorgaste. Si tienes dudas o consultas, contáctanos:';
-      setupContacts('Hola, tengo una consulta sobre mi ticket para THE TRIBE PT.II.');
+      setIntro(previewQty);
+      statusMessage.textContent = previewQty > 1
+        ? `En breve enviaremos tus ${previewQty} tickets al correo que nos otorgaste. Si tienes dudas o consultas, contáctanos:`
+        : 'En breve enviaremos tu ticket al correo que nos otorgaste. Si tienes dudas o consultas, contáctanos:';
+      setupContacts('Hola, acabo de comprar mi ticket para THE TRIBE PT.II en la página y tengo una consulta.');
       contactHeading.style.display = 'none';
       homeBtn.style.display = 'inline-block';
       showResult();
@@ -334,19 +339,22 @@
 
       if(data.success){
         notifyAdmin(data);
+        const quantity = Math.max(1, parseInt(data.quantity, 10) || 1);
         fireConfetti();
         brandLogos.style.display = 'flex';
         statusTitle.textContent = 'GRACIAS POR TU COMPRA';
-        setIntro();
-        statusMessage.textContent = 'En breve enviaremos tu ticket al correo que nos otorgaste. Si tienes dudas o consultas, contáctanos:';
-        setupContacts('Hola, tengo una consulta sobre mi ticket para THE TRIBE PT.II.');
+        setIntro(quantity);
+        statusMessage.textContent = quantity > 1
+          ? `En breve enviaremos tus ${quantity} tickets al correo que nos otorgaste. Si tienes dudas o consultas, contáctanos:`
+          : 'En breve enviaremos tu ticket al correo que nos otorgaste. Si tienes dudas o consultas, contáctanos:';
+        setupContacts('Hola, acabo de comprar mi ticket para THE TRIBE PT.II en la página y tengo una consulta.');
         contactHeading.style.display = 'none';
         homeBtn.style.display = 'inline-block';
       } else if(data.status === 'AlreadyUsed'){
         statusTitle.textContent = 'Este enlace ya fue usado';
         statusMessage.textContent = 'Te llevamos a la página del evento...';
         showResult();
-        setTimeout(() => { window.location.replace('ticketsTHETRIBEPTII.html'); }, 1400);
+        setTimeout(() => { window.location.replace('ticketsTHETRIBEPTII'); }, 1400);
         return;
       } else {
         statusTitle.textContent = 'El pago no se completó';

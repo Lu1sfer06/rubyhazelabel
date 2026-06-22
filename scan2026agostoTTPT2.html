@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escaneo de Tickets | Ruby Haze</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@200;300;400;600;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{ --yellow: #dbce44; }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:#0a0a0a;
+    color:#ffffff;
+    font-family:'Google Sans Flex', sans-serif;
+    font-weight:300;
+  }
+  header{
+    background:#000000;
+    padding:18px 6%;
+    text-align:center;
+  }
+  header h1{
+    margin:0;
+    color: var(--yellow);
+    font-weight:900;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    font-size:1.3rem;
+  }
+  header p{ margin:4px 0 0; font-size:0.8rem; color:rgba(255,255,255,0.6); }
+
+  main{ max-width:480px; margin:0 auto; padding:24px 6% 60px; text-align:center; }
+
+  .gate{ margin-top:60px; }
+  .gate input{
+    width:100%;
+    max-width:280px;
+    padding:14px 16px;
+    border-radius:12px;
+    border:none;
+    font-size:1rem;
+    text-align:center;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    margin-bottom:14px;
+  }
+  .gate button{
+    background: var(--yellow);
+    color:#111111;
+    border:none;
+    padding:14px 32px;
+    border-radius:10px;
+    font-weight:800;
+    font-size:0.85rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .gate-error{ color:#ff6b6b; font-size:0.85rem; margin-top:10px; display:none; }
+
+  #reader{ width:100%; border-radius:16px; overflow:hidden; margin-top:10px; }
+
+  .result{
+    margin-top:18px;
+    padding:18px;
+    border-radius:14px;
+    font-weight:800;
+    font-size:1.05rem;
+    display:none;
+  }
+  .result.ok{ background: rgba(46, 204, 113, 0.15); border:2px solid #2ecc71; color:#2ecc71; }
+  .result.fail{ background: rgba(255, 107, 107, 0.15); border:2px solid #ff6b6b; color:#ff6b6b; }
+  .result.pending{ background: rgba(219, 206, 68, 0.15); border:2px solid var(--yellow); color: var(--yellow); }
+  .result .code{ display:block; font-size:0.8rem; font-weight:500; color:#ffffff; margin-top:10px; }
+
+  .result-details{ margin-top:10px; }
+  .result-details p{ margin:4px 0; font-size:0.95rem; color:#ffffff; font-weight:500; }
+
+  .result-actions{ display:flex; gap:10px; margin-top:14px; }
+  .approve-btn, .cancel-btn{
+    flex:1;
+    border:none;
+    border-radius:10px;
+    padding:14px;
+    font-weight:800;
+    font-size:0.8rem;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .approve-btn{ background:#2ecc71; color:#0a0a0a; }
+  .cancel-btn{ background:rgba(255,255,255,0.1); color:#ffffff; }
+
+  .stats{ margin-top:16px; font-size:0.8rem; color:rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Escaneo de Tickets</h1>
+  <p>THE TRIBE PT.II — Kuno Seafood Rooftop</p>
+</header>
+
+<main>
+
+  <div class="gate" id="gate">
+    <p>Ingresa la clave de acceso del personal:</p>
+    <input type="password" id="gateInput" placeholder="Clave" autocomplete="off">
+    <br>
+    <button type="button" id="gateBtn">Entrar</button>
+    <p class="gate-error" id="gateError">Clave incorrecta.</p>
+  </div>
+
+  <div id="scannerWrap" style="display:none;">
+    <div id="reader"></div>
+    <div class="result" id="result">
+      <span id="resultMain"></span>
+      <div class="result-details" id="resultDetails" style="display:none;">
+        <p>Lista #<strong id="resultListNum"></strong> — <strong id="resultName"></strong></p>
+        <p id="resultDoc"></p>
+        <p id="resultQty"></p>
+      </div>
+      <div class="result-actions" id="resultActions" style="display:none;">
+        <button type="button" class="approve-btn" id="approveBtn">Aprobar entrada</button>
+        <button type="button" class="cancel-btn" id="cancelBtn">Cancelar</button>
+      </div>
+      <span class="code" id="resultCode"></span>
+    </div>
+    <p class="stats" id="stats">0 entradas aprobadas</p>
+  </div>
+
+</main>
+
+<script>
+  const gate = document.getElementById('gate');
+  const gateInput = document.getElementById('gateInput');
+  const gateBtn = document.getElementById('gateBtn');
+  const gateError = document.getElementById('gateError');
+  const scannerWrap = document.getElementById('scannerWrap');
+  const result = document.getElementById('result');
+  const resultMain = document.getElementById('resultMain');
+  const resultDetails = document.getElementById('resultDetails');
+  const resultListNum = document.getElementById('resultListNum');
+  const resultName = document.getElementById('resultName');
+  const resultDoc = document.getElementById('resultDoc');
+  const resultQty = document.getElementById('resultQty');
+  const resultActions = document.getElementById('resultActions');
+  const approveBtn = document.getElementById('approveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const resultCode = document.getElementById('resultCode');
+  const statsEl = document.getElementById('stats');
+
+  let scanKey = sessionStorage.getItem('rh_scan_key') || '';
+  let scannedCount = 0;
+  let busy = false;
+  let scanner = null;
+  let pendingCode = '';
+
+  function startScanner(){
+    gate.style.display = 'none';
+    scannerWrap.style.display = 'block';
+
+    scanner = new Html5Qrcode('reader');
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: 240 },
+      (decodedText) => handleScan(decodedText)
+    ).catch((err) => {
+      showFail('No se pudo abrir la cámara: ' + err);
+    });
+  }
+
+  function showFail(message){
+    result.className = 'result fail';
+    resultMain.textContent = '✗ ' + message;
+    resultDetails.style.display = 'none';
+    resultActions.style.display = 'none';
+    result.style.display = 'block';
+    setTimeout(resumeScanning, 1800);
+  }
+
+  function resumeScanning(){
+    result.style.display = 'none';
+    pendingCode = '';
+    busy = false;
+    if(scanner) scanner.resume();
+  }
+
+  async function handleScan(code){
+    if(busy) return;
+    busy = true;
+    if(scanner) scanner.pause();
+    pendingCode = code;
+
+    try{
+      const res = await fetch('/api/tickets/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-scan-key': scanKey },
+        body: JSON.stringify({ code })
+      });
+
+      if(res.status === 401){
+        sessionStorage.removeItem('rh_scan_key');
+        location.reload();
+        return;
+      }
+
+      const data = await res.json();
+      resultCode.textContent = code;
+
+      if(!data.found){
+        showFail('Código no válido');
+        return;
+      }
+      if(data.used){
+        showFail('Ya fue aprobado antes' + (data.usedAt ? ' (' + new Date(data.usedAt).toLocaleTimeString() + ')' : ''));
+        return;
+      }
+
+      result.className = 'result pending';
+      resultMain.textContent = 'Ticket encontrado — cotéjalo con la lista impresa';
+      resultListNum.textContent = data.listNumber;
+      resultName.textContent = data.cardholderName || '(sin nombre)';
+      resultDoc.textContent = data.document ? `Cédula: ${data.document}` : '';
+      resultQty.textContent = data.quantity > 1 ? `Grupo de ${data.quantity} personas` : '1 persona';
+      resultDetails.style.display = 'block';
+      resultActions.style.display = 'flex';
+      result.style.display = 'block';
+    } catch(err){
+      showFail('Error de conexión, intenta de nuevo');
+    }
+  }
+
+  approveBtn.addEventListener('click', async () => {
+    if(!pendingCode) return;
+    try{
+      const res = await fetch('/api/tickets/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-scan-key': scanKey },
+        body: JSON.stringify({ code: pendingCode })
+      });
+      const data = await res.json();
+
+      if(data.approved){
+        scannedCount++;
+        statsEl.textContent = scannedCount + ' entradas aprobadas';
+        result.className = 'result ok';
+        resultMain.textContent = '✓ Entrada aprobada';
+        resultActions.style.display = 'none';
+        setTimeout(resumeScanning, 1400);
+      } else {
+        showFail('Ya fue aprobado antes');
+      }
+    } catch(err){
+      showFail('Error de conexión, intenta de nuevo');
+    }
+  });
+
+  cancelBtn.addEventListener('click', resumeScanning);
+
+  gateBtn.addEventListener('click', () => {
+    scanKey = gateInput.value.trim();
+    if(!scanKey){ return; }
+    sessionStorage.setItem('rh_scan_key', scanKey);
+    gateError.style.display = 'none';
+    startScanner();
+  });
+
+  gateInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') gateBtn.click();
+  });
+
+  if(scanKey){
+    startScanner();
+  }
+</script>
+
+</body>
+</html>

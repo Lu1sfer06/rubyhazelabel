@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const https = require('https');
 const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
 const GMAIL_USER = (process.env.GMAIL_USER || '').trim();
 const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || '').trim();
+const SCAN_PASSWORD = (process.env.SCAN_PASSWORD || '').trim();
 
 // EDITAR: datos del evento mostrados en el correo del ticket.
 const EVENT = {
@@ -42,31 +44,110 @@ function withTimeout(promise, ms, label) {
 // a mostrarse "¡Listo!" ni se reenvía el ticket/aviso.
 const usedTransactions = new Set();
 
-async function sendTicketEmail({ email, cardholderName, transactionId }) {
-  const ticketCode = `RH-${transactionId}`;
+// Registro de tickets emitidos (uno por compra, sin importar la cantidad de
+// personas) y si ya fueron aprobados en la puerta. `listNumber` es el número
+// correlativo que aparece en la lista impresa para cotejar a mano. Se
+// persiste a disco para sobrevivir un reinicio del proceso durante el
+// evento; un *redeploy* en Railway sí lo borra, así que no se debe hacer
+// push de código mientras el evento está en curso.
+const TICKETS_DB_PATH = path.join(__dirname, 'tickets-db.json');
+
+function loadIssuedTickets() {
+  try {
+    return JSON.parse(fs.readFileSync(TICKETS_DB_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveIssuedTickets() {
+  fs.writeFile(TICKETS_DB_PATH, JSON.stringify(issuedTickets, null, 2), (err) => {
+    if (err) console.error('Error guardando tickets-db.json:', err);
+  });
+}
+
+const issuedTickets = loadIssuedTickets();
+
+function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity }) {
+  const listNumber = Object.keys(issuedTickets).length + 1;
+  issuedTickets[code] = {
+    listNumber,
+    transactionId,
+    cardholderName: cardholderName || '',
+    document: document || '',
+    quantity,
+    used: false,
+    usedAt: null
+  };
+  saveIssuedTickets();
+  return listNumber;
+}
+
+function ticketGroupLabel(quantity) {
+  return quantity === 1 ? 'Entrada individual' : `Entrada de ${quantity} personas`;
+}
+
+const TICKET_ACCENT = '#dbce44';
+const TICKET_WHATSAPP_NUMBERS = [
+  { number: '593978820979', display: '+593 97 882 0979' },
+  { number: '593986945986', display: '+593 98 694 5986' }
+];
+const TICKET_CONTACT_EMAIL = 'maison@rubyhazelabel.com';
+
+async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) {
   const qrBuffer = await QRCode.toBuffer(ticketCode, { width: 320, margin: 2 });
+  const groupLabel = ticketGroupLabel(quantity);
+  const waText = encodeURIComponent(`Hola, tengo una consulta sobre mi ticket/QR ya adquirido para ${EVENT.name}.`);
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; border: 1px solid #eee;">
-      <h1 style="color:#a2031a; font-size: 22px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;">Ruby Haze</h1>
-      <p style="color:#a2031a; font-weight: bold; font-size: 18px; margin: 0 0 4px;">${EVENT.name}</p>
-      <p style="color:#888; margin: 0 0 24px;">${EVENT.date} · ${EVENT.place}</p>
-      <p style="margin: 0 0 4px;">Hola <strong>${cardholderName || ''}</strong>,</p>
-      <p style="margin: 0 0 24px;">Gracias por tu compra. Este es tu ticket — preséntalo (impreso o en tu celular) en la entrada del evento.</p>
-      <div style="text-align:center; margin-bottom: 24px;">
-        <img src="cid:qrcode" alt="Código QR del ticket" width="240" height="240">
-        <p style="color:#888; font-size: 12px; margin-top: 8px;">${ticketCode}</p>
+    <div style="font-family: Arial, sans-serif; max-width: 420px; margin: 0 auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #eee;">
+
+      <div style="background-image: linear-gradient(180deg, rgba(10,10,10,0.55), rgba(10,10,10,0.8)), url('https://rubyhazemusic.com/eventos/para%20ticket.png'); background-size:cover; background-position:center; padding:24px; text-align:center;">
+        <div style="margin-bottom:12px; font-size:0;"><img src="https://rubyhazemusic.com/eventos/rhz%20blanco.png" alt="Ruby Haze" width="140" style="display:inline-block; vertical-align:middle; margin:0;"><img src="https://rubyhazemusic.com/eventos/kuno%20logo%20blanco.png" alt="Kuno Seafood" width="140" style="display:inline-block; vertical-align:middle; margin:0;"></div>
+        <p style="color:${TICKET_ACCENT}; font-weight:900; font-size:34px; letter-spacing:0.04em; text-transform:uppercase; margin:0; text-shadow:0 2px 6px rgba(0,0,0,0.7); line-height:1.1;">${EVENT.name}</p>
+        <p style="color:#ffffff; font-size:12px; margin:6px 0 0; text-shadow:0 1px 4px rgba(0,0,0,0.7);">${EVENT.date} · ${EVENT.place}</p>
       </div>
-      <p style="color:#888; font-size: 12px;">Si tienes dudas, contáctanos por WhatsApp respondiendo a este correo.</p>
+
+      <div style="padding:26px 24px 4px;">
+        <p style="margin:0 0 4px; color:#111111; font-size:14px; text-align:center;">Hola <strong>${cardholderName || ''}</strong>,</p>
+        <p style="margin:0; color:#555555; font-size:13px; line-height:1.6; text-align:center;">${
+          quantity > 1
+            ? `Gracias por tu compra. Este ticket es para tu grupo de ${quantity} personas (tú + ${quantity - 1} acompañante${quantity - 1 > 1 ? 's' : ''}) — preséntalo en la entrada y deben ingresar todos juntos.`
+            : 'Gracias por tu compra. Este es tu ticket — preséntalo (impreso o en tu celular) en la entrada del evento.'
+        }</p>
+      </div>
+
+      <div style="border-top:2px dashed #dddddd; margin:22px 24px 0;"></div>
+
+      <div style="padding:22px 24px; text-align:center;">
+        <img src="cid:qrcode" alt="Código QR del ticket" width="220" height="220">
+        <p style="color:#bbbbbb; font-size:11px; letter-spacing:0.04em; margin:10px 0 4px;">${ticketCode}</p>
+        <p style="display:inline-block; background:#0a0a0a; color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; padding:6px 14px; border-radius:14px; margin-top:4px;">${groupLabel}</p>
+      </div>
+
+      <div style="background:#0a0a0a; padding:18px 24px; text-align:center;">
+        <p style="color:rgba(255,255,255,0.5); font-size:11px; margin:0 0 8px;">¿Tienes dudas? Escríbenos por WhatsApp o correo:</p>
+        <p style="margin:0 0 6px; font-size:12px;">
+          <a href="mailto:${TICKET_CONTACT_EMAIL}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
+        </p>
+        <p style="margin:0; font-size:12px;">
+          ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
+        </p>
+      </div>
+
     </div>
   `;
 
   await mailer.sendMail({
     from: `"Ruby Haze" <${GMAIL_USER}>`,
     to: email,
-    subject: `Tu ticket — ${EVENT.name}`,
+    subject: quantity > 1 ? `Tu ticket (grupo de ${quantity}) — ${EVENT.name}` : `Tu ticket — ${EVENT.name}`,
     html,
-    attachments: [{ filename: 'ticket-qr.png', content: qrBuffer, cid: 'qrcode' }]
+    attachments: [{
+      filename: 'ticket-qr.png',
+      content: qrBuffer,
+      cid: 'qrcode'
+    }]
   });
 }
 
@@ -151,12 +232,24 @@ app.post('/api/payphone/confirm', async (req, res) => {
       }
       usedTransactions.add(transactionId);
 
+      const quantity = Math.max(1, parseInt(data.optionalParameter1, 10) || 1);
+      const ticketCode = `RH-${data.transactionId}`;
+      const listNumber = registerIssuedTicket(ticketCode, {
+        transactionId: data.transactionId,
+        cardholderName: data.optionalParameter4,
+        document: data.document,
+        quantity
+      });
+
       const ticket = {
         transactionId: data.transactionId,
         email: data.email,
         phoneNumber: data.phoneNumber,
         document: data.document,
-        cardholderName: data.optionalParameter4
+        cardholderName: data.optionalParameter4,
+        quantity,
+        ticketCode,
+        listNumber
       };
 
       // No debe bloquear la respuesta al comprador: se dispara en segundo
@@ -174,6 +267,76 @@ app.post('/api/payphone/confirm', async (req, res) => {
     console.error('Payphone Confirm exception:', err);
     res.status(500).json({ error: 'Error de conexión con Payphone.' });
   }
+});
+
+// Solo el personal de la puerta, con la clave de escaneo, puede usar estas rutas.
+function requireScanKey(req, res, next) {
+  const key = (req.headers['x-scan-key'] || '').trim();
+  if (!SCAN_PASSWORD || key !== SCAN_PASSWORD) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  next();
+}
+
+// Paso 1: al escanear, solo consulta los datos del ticket (no lo marca como
+// usado todavía) para que el personal lo coteje contra la lista impresa.
+app.post('/api/tickets/lookup', requireScanKey, (req, res) => {
+  const code = (req.body && req.body.code || '').trim();
+  const ticket = issuedTickets[code];
+
+  if (!ticket) {
+    return res.json({ found: false });
+  }
+
+  res.json({
+    found: true,
+    code,
+    listNumber: ticket.listNumber,
+    cardholderName: ticket.cardholderName,
+    document: ticket.document,
+    quantity: ticket.quantity,
+    used: ticket.used,
+    usedAt: ticket.usedAt
+  });
+});
+
+// Paso 2: el personal confirma manualmente contra la lista impresa y aprueba
+// la entrada — a partir de aquí ese código ya no es válido.
+app.post('/api/tickets/approve', requireScanKey, (req, res) => {
+  const code = (req.body && req.body.code || '').trim();
+  const ticket = issuedTickets[code];
+
+  if (!ticket) {
+    return res.json({ approved: false, reason: 'not_found' });
+  }
+  if (ticket.used) {
+    return res.json({ approved: false, reason: 'already_used', usedAt: ticket.usedAt });
+  }
+
+  ticket.used = true;
+  ticket.usedAt = new Date().toISOString();
+  saveIssuedTickets();
+
+  res.json({ approved: true, code, cardholderName: ticket.cardholderName, listNumber: ticket.listNumber });
+});
+
+// Lista completa para imprimir antes del evento (respaldo en papel).
+app.get('/api/tickets/list', requireScanKey, (req, res) => {
+  const list = Object.entries(issuedTickets)
+    .map(([code, t]) => ({ code, ...t }))
+    .sort((a, b) => a.listNumber - b.listNumber);
+  res.json({ list });
+});
+
+// Permite abrir cualquier página estática sin escribir ".html" en la URL
+// (ej. /ticketsTHETRIBEPTII en vez de /ticketsTHETRIBEPTII.html). El archivo
+// con extensión sigue funcionando igual, esto solo agrega la alternativa.
+app.get(/^\/[\w-]+$/, (req, res, next) => {
+  const htmlPath = path.join(__dirname, req.path + '.html');
+  fs.access(htmlPath, fs.constants.F_OK, (err) => {
+    if (err) return next();
+    res.sendFile(htmlPath);
+  });
 });
 
 app.get('*', (req, res) => {

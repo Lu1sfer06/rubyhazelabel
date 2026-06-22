@@ -165,6 +165,60 @@
   }
   #pp-button{ display:flex; justify-content:center; }
 
+  .promo-banner{
+    display:inline-block;
+    text-align:center;
+    line-height:1.4;
+    background: linear-gradient(135deg, #c41230, #7a0c1d);
+    color:#ffffff;
+    font-weight:800;
+    font-size:0.78rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:8px 16px;
+    border-radius:16px;
+    margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(162,3,26,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+  .qty-selector{ text-align:center; margin-bottom: 22px; }
+  .qty-label{
+    display:block;
+    color:#111111;
+    font-weight:700;
+    font-size:0.8rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:12px;
+  }
+  .qty-control{ display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:12px; }
+  .qty-btn{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:none;
+    background:#111111;
+    color:#ffffff;
+    font-size:1.2rem;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+  }
+  .qty-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+  #qtyValue{ font-size:1.3rem; font-weight:800; color:#111111; min-width:24px; text-align:center; }
+  .qty-total{ color:#111111; font-weight:700; font-size:0.95rem; }
+  .qty-total strong{ color: var(--red); font-weight:800; }
+  .qty-note{
+    color:#555555;
+    font-weight:500;
+    font-size:0.88rem;
+    line-height:1.5;
+    margin-top:10px;
+    max-width:340px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
   /* CONSULTAS POR WHATSAPP */
   .inquiry-block{ margin-top: 32px; text-align:center; }
   .inquiry-text{
@@ -213,7 +267,7 @@
 
 <header>
   <div class="logo-mark"><img src="eventos/rombo%20blanco.png" alt="Ruby Haze"></div>
-  <a class="back-link" href="index.html">&larr; Volver al inicio</a>
+  <a class="back-link" href="/">&larr; Volver al inicio</a>
 </header>
 
 <main>
@@ -241,7 +295,20 @@
     </div>
 
     <div class="pp-card">
-      <p class="pay-instructions">Puedes pagar con tarjeta de crédito o débito de cualquier banco, sin problema, de forma segura gracias a Payphone. Tu entrada llegará a tu correo como un ticket con código QR.</p>
+      <p class="pay-instructions">Puedes pagar con tarjeta de crédito o débito de cualquier banco, sin problema, de forma segura gracias a Payphone. Cada entrada llegará a tu correo como un ticket con su propio código QR.</p>
+
+      <div class="qty-selector">
+        <div class="promo-banner">Promo: $11.68 c/u<br>comprando en grupo de 5 tickets</div>
+        <span class="qty-label">Cantidad de tickets</span>
+        <div class="qty-control">
+          <button type="button" class="qty-btn" id="qtyMinus" aria-label="Restar ticket">&minus;</button>
+          <span id="qtyValue">1</span>
+          <button type="button" class="qty-btn" id="qtyPlus" aria-label="Sumar ticket">+</button>
+        </div>
+        <p class="qty-total">Total a pagar: <strong id="qtyTotal">$15.92</strong></p>
+        <p class="qty-note" id="qtyNote" style="display:none;">El ticket llega solo a la persona que lo compra, ¡pero no te preocupes! Queda registrada la cantidad de acompañantes dentro del mismo. Si tienes dudas, nuestros contactos están al final de esta página.</p>
+      </div>
+
       <div id="pp-button"></div>
     </div>
 
@@ -289,16 +356,31 @@
   ];
 
   (function setupContacts(){
-    const text = encodeURIComponent(`Hola, tengo una consulta sobre la compra de mi ticket para ${CONFIG.eventName}.`);
+    const text = encodeURIComponent(`Hola, tengo una consulta antes de comprar mi ticket para ${CONFIG.eventName}.`);
     WHATSAPP_NUMBERS.forEach((wa, i) => {
       document.getElementById('wa' + (i + 1)).href = `https://wa.me/${wa.number}?text=${text}`;
     });
   })();
 
-  const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-  const amountCents = Math.round(CONFIG.priceUSD * 100);
+  const MAX_QTY = 5;
+  const PROMO_QTY = 5;
+  const PROMO_PRICE_USD = 11.68; // grupo de 5: cada entrada deja $11 netos tras la comisión de Payphone
+  let quantity = 1;
 
-  window.addEventListener('DOMContentLoaded', () => {
+  const qtyValueEl = document.getElementById('qtyValue');
+  const qtyTotalEl = document.getElementById('qtyTotal');
+  const qtyNoteEl = document.getElementById('qtyNote');
+  const qtyMinusBtn = document.getElementById('qtyMinus');
+  const qtyPlusBtn = document.getElementById('qtyPlus');
+
+  function pricePerTicket(qty){
+    return qty === PROMO_QTY ? PROMO_PRICE_USD : CONFIG.priceUSD;
+  }
+
+  function renderPaymentButton(){
+    const amountCents = Math.round(pricePerTicket(quantity) * quantity * 100);
+    const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    document.getElementById('pp-button').innerHTML = '';
     new PPaymentButtonBox({
       token: CONFIG.payphoneToken,
       clientTransactionId,
@@ -308,9 +390,31 @@
       tax: 0,
       currency: 'USD',
       storeId: CONFIG.payphoneStoreId,
-      reference: `Ticket Ruby Haze`,
+      reference: `Ticket Ruby Haze x${quantity}`,
+      optionalParameter1: String(quantity),
       lang: 'es'
     }).render('pp-button');
+  }
+
+  function updateQty(newQty){
+    quantity = Math.min(MAX_QTY, Math.max(1, newQty));
+    const unitPrice = pricePerTicket(quantity);
+    const total = unitPrice * quantity;
+    qtyValueEl.textContent = quantity;
+    qtyTotalEl.textContent = quantity > 1
+      ? `$${total.toFixed(2)} ($${unitPrice.toFixed(2)} c/u)`
+      : `$${total.toFixed(2)}`;
+    qtyNoteEl.style.display = quantity > 1 ? 'block' : 'none';
+    qtyMinusBtn.disabled = quantity <= 1;
+    qtyPlusBtn.disabled = quantity >= MAX_QTY;
+    renderPaymentButton();
+  }
+
+  qtyMinusBtn.addEventListener('click', () => updateQty(quantity - 1));
+  qtyPlusBtn.addEventListener('click', () => updateQty(quantity + 1));
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateQty(1);
   });
 </script>
 
