@@ -256,7 +256,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
       // plano y está limitado por un timeout duro. El aviso al admin
       // (Web3Forms) se hace desde el navegador, ver confirm.html — su plan
       // gratuito rechaza envíos hechos directamente desde un servidor.
-      withTimeout(sendTicketEmail(ticket), 25000, 'sendTicketEmail')
+      sendTicketEmail(ticket)
         .then(() => console.log('Ticket enviado por correo a', ticket.email))
         .catch((mailErr) => console.error('Error enviando el ticket por correo:', mailErr));
 
