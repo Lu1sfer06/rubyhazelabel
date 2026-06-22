@@ -6,7 +6,7 @@ const https = require('https');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN;
+const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
 
 app.use(express.static(__dirname));
 app.use(express.json());
@@ -81,10 +81,10 @@ app.post('/api/payphone/confirm', async (req, res) => {
         cardholderName: data.optionalParameter4
       });
     }
-    res.json({ success: false, status: data.transactionStatus || 'Desconocido', debug: data });
+    res.json({ success: false, status: data.transactionStatus || 'Desconocido' });
   } catch (err) {
     console.error('Payphone Confirm exception:', err);
-    res.status(500).json({ error: 'Error de conexión con Payphone.', debug: err.message });
+    res.status(500).json({ error: 'Error de conexión con Payphone.' });
   }
 });
 
