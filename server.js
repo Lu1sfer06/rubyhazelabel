@@ -2,11 +2,83 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const https = require('https');
+const nodemailer = require('nodemailer');
+const QRCode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
+const GMAIL_USER = (process.env.GMAIL_USER || '').trim();
+const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || '').trim();
+
+// EDITAR: datos del evento mostrados en el correo del ticket.
+const EVENT = {
+  name: 'THE TRIBE PT.II',
+  date: 'Sábado 01 de Agosto',
+  place: 'Kuno Seafood, Portoviejo'
+};
+
+const WEB3FORMS_ACCESS_KEY = '6da871fd-2211-4b44-a3b8-1258cf288fdd';
+
+const mailer = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD }
+});
+
+// transactionId de pagos ya mostrados/confirmados. Cada enlace de
+// confirmación es de un solo uso: si alguien recarga, navega con
+// atrás/adelante, o reutiliza la URL (incluso el mismo comprador), no vuelve
+// a mostrarse "¡Listo!" ni se reenvía el ticket/aviso.
+const usedTransactions = new Set();
+
+async function notifyAdmin(ticket) {
+  const formData = new URLSearchParams();
+  formData.append('access_key', WEB3FORMS_ACCESS_KEY);
+  formData.append('subject', 'Nuevo ticket comprado — Ruby Haze (Tarjeta)');
+  formData.append('from_name', 'Ruby Haze — Tickets');
+  formData.append('cardholder_name', ticket.cardholderName || '');
+  formData.append('cedula', ticket.document || '');
+  formData.append('phone', ticket.phoneNumber || '');
+  formData.append('email', ticket.email || '');
+  formData.append('payment_method', 'tarjeta (Payphone)');
+  formData.append('transaction_id', ticket.transactionId || '');
+  formData.append('event', EVENT.name);
+
+  await fetch('https://api.web3forms.com/submit', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formData.toString()
+  });
+}
+
+async function sendTicketEmail({ email, cardholderName, transactionId }) {
+  const ticketCode = `RH-${transactionId}`;
+  const qrBuffer = await QRCode.toBuffer(ticketCode, { width: 320, margin: 2 });
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; border: 1px solid #eee;">
+      <h1 style="color:#a2031a; font-size: 22px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;">Ruby Haze</h1>
+      <p style="color:#a2031a; font-weight: bold; font-size: 18px; margin: 0 0 4px;">${EVENT.name}</p>
+      <p style="color:#888; margin: 0 0 24px;">${EVENT.date} · ${EVENT.place}</p>
+      <p style="margin: 0 0 4px;">Hola <strong>${cardholderName || ''}</strong>,</p>
+      <p style="margin: 0 0 24px;">Gracias por tu compra. Este es tu ticket — preséntalo (impreso o en tu celular) en la entrada del evento.</p>
+      <div style="text-align:center; margin-bottom: 24px;">
+        <img src="cid:qrcode" alt="Código QR del ticket" width="240" height="240">
+        <p style="color:#888; font-size: 12px; margin-top: 8px;">${ticketCode}</p>
+      </div>
+      <p style="color:#888; font-size: 12px;">Si tienes dudas, contáctanos por WhatsApp respondiendo a este correo.</p>
+    </div>
+  `;
+
+  await mailer.sendMail({
+    from: `"Ruby Haze" <${GMAIL_USER}>`,
+    to: email,
+    subject: `Tu ticket — ${EVENT.name}`,
+    html,
+    attachments: [{ filename: 'ticket-qr.png', content: qrBuffer, cid: 'qrcode' }]
+  });
+}
 
 app.use(express.static(__dirname));
 app.use(express.json());
@@ -56,7 +128,13 @@ app.post('/api/payphone/confirm', async (req, res) => {
     return res.status(400).json({ error: 'Faltan datos de confirmación.' });
   }
 
-  const payload = { id: Number(id), clientTxId: clientTransactionId };
+  const transactionId = Number(id);
+
+  if (usedTransactions.has(transactionId)) {
+    return res.json({ success: false, status: 'AlreadyUsed' });
+  }
+
+  const payload = { id: transactionId, clientTxId: clientTransactionId };
 
   try {
     let { data } = await payphonePost('/api/button/V2/Confirm', payload);
@@ -72,14 +150,34 @@ app.post('/api/payphone/confirm', async (req, res) => {
     }
 
     if (data.transactionStatus === 'Approved') {
-      return res.json({
-        success: true,
+      // Se marca como usada ANTES de responder: si dos peticiones llegan casi
+      // al mismo tiempo, solo una debe poder mostrar éxito y notificar.
+      if (usedTransactions.has(transactionId)) {
+        return res.json({ success: false, status: 'AlreadyUsed' });
+      }
+      usedTransactions.add(transactionId);
+
+      const ticket = {
         transactionId: data.transactionId,
         email: data.email,
         phoneNumber: data.phoneNumber,
         document: data.document,
         cardholderName: data.optionalParameter4
-      });
+      };
+
+      try {
+        await sendTicketEmail(ticket);
+      } catch (mailErr) {
+        console.error('Error enviando el ticket por correo:', mailErr);
+      }
+
+      try {
+        await notifyAdmin(ticket);
+      } catch (notifyErr) {
+        console.error('Error notificando al admin:', notifyErr);
+      }
+
+      return res.json({ success: true, ...ticket });
     }
     res.json({ success: false, status: data.transactionStatus || 'Desconocido' });
   } catch (err) {

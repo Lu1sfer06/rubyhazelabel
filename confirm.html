@@ -147,8 +147,6 @@
 </main>
 
 <script>
-  const WEB3FORMS_ACCESS_KEY = '6da871fd-2211-4b44-a3b8-1258cf288fdd';
-  const EVENT_NAME = 'THE TRIBE PT.II';
   const WHATSAPP_NUMBERS = [
     { number: '593978820979' },
     { number: '593986945986' }
@@ -177,28 +175,6 @@
       document.getElementById('wa' + (i + 1)).href = `https://wa.me/${wa.number}?text=${text}`;
     });
     contactRow.style.display = 'flex';
-  }
-
-  async function notifyPurchase(data){
-    const formData = new FormData();
-    formData.append('access_key', WEB3FORMS_ACCESS_KEY);
-    formData.append('subject', 'Nuevo ticket comprado — Ruby Haze (Tarjeta)');
-    formData.append('from_name', 'Ruby Haze — Tickets');
-    formData.append('cardholder_name', data.cardholderName || '');
-    formData.append('cedula', data.document || '');
-    formData.append('phone', data.phoneNumber || '');
-    formData.append('email', data.email || '');
-    formData.append('payment_method', 'tarjeta (Payphone)');
-    formData.append('transaction_id', data.transactionId || '');
-    formData.append('event', EVENT_NAME);
-
-    try{
-      await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        body: formData
-      });
-    } catch(err){ /* la notificación es informativa, no bloquea la confirmación */ }
   }
 
   async function confirmPayment(){
@@ -230,7 +206,12 @@
         statusMessage.textContent = `Gracias por confirmar tu asistencia al evento THE TRIBE PT.II para el sábado 01 de agosto en Kuno Seafood, Portoviejo. En breve enviaremos tu ticket a tu correo o al número que nos otorgaste. En caso de dudas o consultas, por favor contáctanos a estos medios:`;
         setupContacts('Hola, tengo una consulta sobre mi ticket para THE TRIBE PT.II.');
         homeBtn.style.display = 'inline-block';
-        notifyPurchase(data);
+      } else if(data.status === 'AlreadyUsed'){
+        statusTitle.textContent = 'Este enlace ya fue usado';
+        statusMessage.textContent = 'Te llevamos al inicio...';
+        showResult();
+        setTimeout(() => { window.location.replace('index.html'); }, 1400);
+        return;
       } else {
         statusTitle.textContent = 'El pago no se completó';
         statusMessage.textContent = 'Estado: ' + (data.status || 'desconocido') + '. Si crees que esto es un error, contáctanos por WhatsApp.';
