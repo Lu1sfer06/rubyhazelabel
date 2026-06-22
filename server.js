@@ -15,8 +15,8 @@ const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || '').trim();
 // EDITAR: datos del evento mostrados en el correo del ticket.
 const EVENT = {
   name: 'THE TRIBE PT.II',
-  date: 'Sábado 01 de Agosto',
-  place: 'Kuno Seafood, Portoviejo'
+  date: 'Sábado 01 de Agosto · 9:00 PM',
+  place: 'Kuno Seafood Rooftop, Portoviejo'
 };
 
 const mailer = nodemailer.createTransport({
