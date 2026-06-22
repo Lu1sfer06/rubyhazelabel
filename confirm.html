@@ -152,6 +152,34 @@
     { number: '593986945986' }
   ];
 
+  const WEB3FORMS_ACCESS_KEY = '6da871fd-2211-4b44-a3b8-1258cf288fdd';
+  const EVENT_NAME = 'THE TRIBE PT.II';
+
+  // Web3Forms (plan gratuito) solo acepta envíos hechos directamente desde
+  // el navegador, no desde un servidor — por eso este aviso vive aquí y no
+  // en server.js. Solo se llama cuando el servidor ya confirmó un pago real
+  // y no repetido (data.success === true), así que sigue siendo imposible
+  // de spamear.
+  function notifyAdmin(ticket){
+    const formData = new URLSearchParams();
+    formData.append('access_key', WEB3FORMS_ACCESS_KEY);
+    formData.append('subject', 'Nuevo ticket comprado — Ruby Haze (Tarjeta)');
+    formData.append('from_name', 'Ruby Haze — Tickets');
+    formData.append('cardholder_name', ticket.cardholderName || '');
+    formData.append('cedula', ticket.document || '');
+    formData.append('phone', ticket.phoneNumber || '');
+    formData.append('email', ticket.email || '');
+    formData.append('payment_method', 'tarjeta (Payphone)');
+    formData.append('transaction_id', ticket.transactionId || '');
+    formData.append('event', EVENT_NAME);
+
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    }).catch((err) => console.error('Error notificando al admin:', err));
+  }
+
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const clientTransactionId = params.get('clientTransactionId');
@@ -209,6 +237,7 @@
       const data = await res.json();
 
       if(data.success){
+        notifyAdmin(data);
         statusTitle.textContent = '¡Listo!';
         statusMessage.textContent = `Gracias por confirmar tu asistencia al evento THE TRIBE PT.II para el sábado 01 de agosto en Kuno Seafood, Portoviejo. En breve enviaremos tu ticket a tu correo o al número que nos otorgaste. En caso de dudas o consultas, por favor contáctanos a estos medios:`;
         setupContacts('Hola, tengo una consulta sobre mi ticket para THE TRIBE PT.II.');

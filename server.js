@@ -19,8 +19,6 @@ const EVENT = {
   place: 'Kuno Seafood, Portoviejo'
 };
 
-const WEB3FORMS_ACCESS_KEY = '6da871fd-2211-4b44-a3b8-1258cf288fdd';
-
 const mailer = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
@@ -43,55 +41,6 @@ function withTimeout(promise, ms, label) {
 // atrás/adelante, o reutiliza la URL (incluso el mismo comprador), no vuelve
 // a mostrarse "¡Listo!" ni se reenvía el ticket/aviso.
 const usedTransactions = new Set();
-
-// El fetch nativo de Node falla/se cuelga de forma intermitente contra
-// algunos hosts en este entorno (ya visto con la API de Payphone); usamos el
-// módulo https nativo también aquí para que el aviso al admin sea confiable.
-function httpsPostForm(hostname, path, body) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname,
-        path,
-        method: 'POST',
-        timeout: 10000,
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(body)
-        }
-      },
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => { data += chunk; });
-        res.on('end', () => resolve({ status: res.statusCode, data }));
-      }
-    );
-    req.on('timeout', () => req.destroy(new Error(`Timeout esperando respuesta de ${hostname}`)));
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-async function notifyAdmin(ticket) {
-  const formData = new URLSearchParams();
-  formData.append('access_key', WEB3FORMS_ACCESS_KEY);
-  formData.append('subject', 'Nuevo ticket comprado — Ruby Haze (Tarjeta)');
-  formData.append('from_name', 'Ruby Haze — Tickets');
-  formData.append('cardholder_name', ticket.cardholderName || '');
-  formData.append('cedula', ticket.document || '');
-  formData.append('phone', ticket.phoneNumber || '');
-  formData.append('email', ticket.email || '');
-  formData.append('payment_method', 'tarjeta (Payphone)');
-  formData.append('transaction_id', ticket.transactionId || '');
-  formData.append('event', EVENT.name);
-
-  const { status, data } = await httpsPostForm('api.web3forms.com', '/submit', formData.toString());
-  if (status < 200 || status >= 300) {
-    throw new Error(`Web3Forms respondió ${status}: ${data.slice(0, 300)}`);
-  }
-}
 
 async function sendTicketEmail({ email, cardholderName, transactionId }) {
   const ticketCode = `RH-${transactionId}`;
@@ -210,15 +159,13 @@ app.post('/api/payphone/confirm', async (req, res) => {
         cardholderName: data.optionalParameter4
       };
 
-      // No deben bloquear la respuesta al comprador: se disparan en segundo
-      // plano y cada una está limitada por un timeout duro.
+      // No debe bloquear la respuesta al comprador: se dispara en segundo
+      // plano y está limitado por un timeout duro. El aviso al admin
+      // (Web3Forms) se hace desde el navegador, ver confirm.html — su plan
+      // gratuito rechaza envíos hechos directamente desde un servidor.
       withTimeout(sendTicketEmail(ticket), 8000, 'sendTicketEmail')
         .then(() => console.log('Ticket enviado por correo a', ticket.email))
         .catch((mailErr) => console.error('Error enviando el ticket por correo:', mailErr));
-
-      withTimeout(notifyAdmin(ticket), 8000, 'notifyAdmin')
-        .then(() => console.log('Aviso al admin enviado para tx', ticket.transactionId))
-        .catch((notifyErr) => console.error('Error notificando al admin:', notifyErr));
 
       return res.json({ success: true, ...ticket });
     }
