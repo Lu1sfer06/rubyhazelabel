@@ -84,7 +84,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
     res.json({ success: false, status: data.transactionStatus || 'Desconocido', debug: data });
   } catch (err) {
     console.error('Payphone Confirm exception:', err);
-    res.status(500).json({ error: 'Error de conexión con Payphone.' });
+    res.status(500).json({ error: 'Error de conexión con Payphone.', debug: err.message });
   }
 });
 
