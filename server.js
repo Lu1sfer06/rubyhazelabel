@@ -24,9 +24,9 @@ const EVENT = {
 const mailer = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 8000
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 // Protege contra llamadas externas (correo, webhook) que se queden colgadas:
@@ -256,7 +256,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
       // plano y está limitado por un timeout duro. El aviso al admin
       // (Web3Forms) se hace desde el navegador, ver confirm.html — su plan
       // gratuito rechaza envíos hechos directamente desde un servidor.
-      withTimeout(sendTicketEmail(ticket), 8000, 'sendTicketEmail')
+      withTimeout(sendTicketEmail(ticket), 25000, 'sendTicketEmail')
         .then(() => console.log('Ticket enviado por correo a', ticket.email))
         .catch((mailErr) => console.error('Error enviando el ticket por correo:', mailErr));
 
