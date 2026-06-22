@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,41 @@ const PAYPHONE_TOKEN = process.env.PAYPHONE_TOKEN;
 
 app.use(express.static(__dirname));
 app.use(express.json());
+
+// El fetch nativo de Node (undici) recibe un 500 "Runtime Error" de la API
+// de Payphone por alguna incompatibilidad de bajo nivel; el módulo https
+// nativo funciona igual que curl, así que lo usamos para esta llamada.
+function payphonePost(hostPath, payload) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload);
+    const req = https.request(
+      {
+        hostname: 'pay.payphonetodoesposible.com',
+        path: hostPath,
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${PAYPHONE_TOKEN}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body)
+        }
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            resolve({ status: res.statusCode, data: JSON.parse(data) });
+          } catch (err) {
+            reject(new Error('Respuesta no válida de Payphone: ' + data.slice(0, 200)));
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
 
 // La Cajita de Payphone hace el Prepare directo desde el navegador.
 // Aquí solo confirmamos el pago de forma segura contra la API real de Payphone.
@@ -19,16 +55,10 @@ app.post('/api/payphone/confirm', async (req, res) => {
   }
 
   try {
-    const response = await fetch('https://pay.payphonetodoesposible.com/api/button/V2/Confirm', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${PAYPHONE_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ id: Number(id), clientTxId: clientTransactionId })
+    const { data } = await payphonePost('/api/button/V2/Confirm', {
+      id: Number(id),
+      clientTxId: clientTransactionId
     });
-
-    const data = await response.json();
 
     if (data.transactionStatus === 'Approved') {
       return res.json({
