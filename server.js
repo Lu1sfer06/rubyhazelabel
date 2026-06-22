@@ -106,6 +106,7 @@ function payphonePost(hostPath, payload) {
         hostname: 'pay.payphonetodoesposible.com',
         path: hostPath,
         method: 'POST',
+        timeout: 10000,
         headers: {
           Authorization: `Bearer ${PAYPHONE_TOKEN}`,
           'Content-Type': 'application/json',
@@ -124,6 +125,9 @@ function payphonePost(hostPath, payload) {
         });
       }
     );
+    // Si Payphone no responde ni cierra la conexión, evita que la promesa
+    // se quede colgada para siempre (esto bloqueaba toda la confirmación).
+    req.on('timeout', () => req.destroy(new Error('Timeout esperando respuesta de Payphone')));
     req.on('error', reject);
     req.write(body);
     req.end();
