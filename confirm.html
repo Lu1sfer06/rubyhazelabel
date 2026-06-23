@@ -314,6 +314,14 @@
       showResult();
       return;
     }
+    if(params.get('preview') === 'failed'){
+      statusTitle.textContent = 'El pago no se completó';
+      statusMessage.innerHTML = 'Es posible que se haya debitado el monto de tu tarjeta. Si te aparece este aviso y no te llega tu ticket, a veces es un error puntual de nuestro sistema de cobros.<br><br>Hacemos lo posible para que esto no pase. No te preocupes: el monto se devolverá a tu tarjeta de forma automática en unos minutos. Si tienes consultas, no olvides comunicarte por WhatsApp:';
+      setupContacts('Hola, compré tickets para THE TRIBE PT.II pero me sale que el pago no se completó.');
+      backLink.style.display = 'inline-block';
+      showResult();
+      return;
+    }
 
     if(!id || !clientTransactionId){
       statusTitle.textContent = 'No pudimos confirmar tu pago';
@@ -364,8 +372,8 @@
         return;
       } else {
         statusTitle.textContent = 'El pago no se completó';
-        statusMessage.textContent = 'Estado: ' + (data.status || 'desconocido') + '. Si crees que esto es un error, contáctanos por WhatsApp.';
-        setupContacts('Hola, tengo una consulta sobre mi pago para THE TRIBE PT.II.');
+        statusMessage.innerHTML = 'Es posible que se haya debitado el monto de tu tarjeta. Si te aparece este aviso y no te llega tu ticket, a veces es un error puntual de nuestro sistema de cobros.<br><br>Hacemos lo posible para que esto no pase. No te preocupes: el monto se devolverá a tu tarjeta de forma automática en unos minutos. Si tienes consultas, no olvides comunicarte por WhatsApp:';
+        setupContacts('Hola, compré tickets para THE TRIBE PT.II pero me sale que el pago no se completó.');
         backLink.style.display = 'inline-block';
       }
     } catch(err){
