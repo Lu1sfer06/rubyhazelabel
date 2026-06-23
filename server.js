@@ -227,6 +227,19 @@ function wrapTextLines(text, maxWidthPx, fontSizePx) {
 
 const TICKET_HEADER_IMAGE_B64 = fs.readFileSync(path.join(__dirname, 'eventos', 'ticket-header.png')).toString('base64');
 
+// El servidor (Railway) no tiene por qué tener ninguna fuente de letra
+// instalada en el sistema — sin esto, librsvg dibuja cada carácter como un
+// cuadro vacío. Se incrusta la fuente directamente en el SVG (como
+// data: URI) para no depender de nada externo al repo.
+const TICKET_FONT_REGULAR_B64 = fs.readFileSync(path.join(__dirname, 'assets', 'fonts', 'DejaVuSans.ttf')).toString('base64');
+const TICKET_FONT_BOLD_B64 = fs.readFileSync(path.join(__dirname, 'assets', 'fonts', 'DejaVuSans-Bold.ttf')).toString('base64');
+const TICKET_FONT_FACES = `
+  <style>
+    @font-face { font-family: 'TicketSans'; font-weight: 400; src: url(data:font/ttf;base64,${TICKET_FONT_REGULAR_B64}); }
+    @font-face { font-family: 'TicketSans'; font-weight: 700; src: url(data:font/ttf;base64,${TICKET_FONT_BOLD_B64}); }
+  </style>
+`;
+
 // Compone el ticket completo (foto + texto + QR + pie) como una sola imagen
 // PNG, para que la persona pueda descargarlo de un solo toque en vez de
 // guardar fragmentos sueltos (la foto de fondo o el QR por separado).
@@ -256,21 +269,21 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   if (isGuest) {
     const bannerH = 92;
     parts.push(`<rect x="0" y="${y}" width="${WIDTH}" height="${bannerH}" fill="${TICKET_ACCENT}"/>`);
-    parts.push(`<text x="${WIDTH / 2}" y="${y + 34}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2" fill="#0a0a0a">RUBY HAZE GUEST TICKET</text>`);
-    parts.push(`<text x="${WIDTH / 2}" y="${y + 68}" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="900" letter-spacing="1" fill="#0a0a0a">INVITADO / A</text>`);
+    parts.push(`<text x="${WIDTH / 2}" y="${y + 34}" text-anchor="middle" font-family="TicketSans" font-size="12" font-weight="700" letter-spacing="2" fill="#0a0a0a">RUBY HAZE GUEST TICKET</text>`);
+    parts.push(`<text x="${WIDTH / 2}" y="${y + 68}" text-anchor="middle" font-family="TicketSans" font-size="30" font-weight="700" letter-spacing="1" fill="#0a0a0a">INVITADO / A</text>`);
     y += bannerH;
   }
 
   y += 34;
-  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#111111">Hola${name ? ` <tspan font-weight="700">${name}</tspan>,` : ','}</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="17" fill="#111111">Hola${name ? ` <tspan font-weight="700">${name}</tspan>,` : ','}</text>`);
   y += 28;
 
   for (const line of introLines) {
-    parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#555555">${escapeXml(line)}</text>`);
+    parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="14" fill="#555555">${escapeXml(line)}</text>`);
     y += 21;
   }
   y += 12;
-  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" letter-spacing="1" fill="#999999">RUBY HAZE TEAM</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="11" letter-spacing="1" fill="#999999">RUBY HAZE TEAM</text>`);
   y += 30;
 
   parts.push(`<line x1="${PAD}" y1="${y}" x2="${WIDTH - PAD}" y2="${y}" stroke="${isGuest ? TICKET_ACCENT : '#dddddd'}" stroke-width="2" stroke-dasharray="6,6"/>`);
@@ -285,23 +298,24 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   parts.push(`<image x="${qrX + qrBoxPad}" y="${y + qrBoxPad}" width="${qrSize}" height="${qrSize}" href="data:image/png;base64,${qrB64}"/>`);
   y += qrBoxSize + 16;
 
-  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" letter-spacing="1" fill="#bbbbbb">${escapeXml(ticketCode)}</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="12" letter-spacing="1" fill="#bbbbbb">${escapeXml(ticketCode)}</text>`);
   y += 26;
 
   const pillW = Math.max(190, groupLabel.length * 9 + 60);
   parts.push(`<rect x="${(WIDTH - pillW) / 2}" y="${y}" width="${pillW}" height="36" rx="14" fill="#0a0a0a"/>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 24}" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1" fill="${TICKET_ACCENT}">${groupLabel}</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 24}" text-anchor="middle" font-family="TicketSans" font-size="13" font-weight="700" letter-spacing="1" fill="${TICKET_ACCENT}">${groupLabel}</text>`);
   y += 36 + 34;
 
   const footerH = 96;
   parts.push(`<rect x="0" y="${y}" width="${WIDTH}" height="${footerH}" fill="#0a0a0a"/>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 30}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#cccccc">¿Tienes dudas? Escríbenos:</text>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 54}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="${TICKET_ACCENT}">${escapeXml(TICKET_CONTACT_EMAIL)}</text>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 76}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="${TICKET_ACCENT}">${TICKET_WHATSAPP_NUMBERS.map((w) => escapeXml(w.display)).join('   ·   ')}</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 30}" text-anchor="middle" font-family="TicketSans" font-size="12" fill="#cccccc">¿Tienes dudas? Escríbenos:</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 54}" text-anchor="middle" font-family="TicketSans" font-size="12" fill="${TICKET_ACCENT}">${escapeXml(TICKET_CONTACT_EMAIL)}</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 76}" text-anchor="middle" font-family="TicketSans" font-size="11" fill="${TICKET_ACCENT}">${TICKET_WHATSAPP_NUMBERS.map((w) => escapeXml(w.display)).join('   ·   ')}</text>`);
   y += footerH;
 
   const totalH = Math.ceil(y);
   const svg = `<svg width="${WIDTH}" height="${totalH}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
+    ${TICKET_FONT_FACES}
     <rect x="0" y="0" width="${WIDTH}" height="${totalH}" fill="#ffffff"/>
     <image x="0" y="0" width="${WIDTH}" height="${headerH}" href="data:image/png;base64,${TICKET_HEADER_IMAGE_B64}"/>
     ${parts.join('\n')}
