@@ -20,6 +20,30 @@ const EVENT = {
   place: 'Kuno Seafood Rooftop, Portoviejo'
 };
 
+// Debe coincidir exactamente con CONFIG/MAX_QTY/PROMO_* en
+// ticketsTHETRIBEPTII.html — se usa para deducir la cantidad de tickets a
+// partir del monto realmente cobrado, ya que los optionalParameter que le
+// pasamos a la Cajita de Payphone no siempre llegan de vuelta en el Confirm.
+const MAX_QTY = 5;
+const PROMO_QTY = 5;
+const PRICE_USD = 15.92;
+const PROMO_PRICE_USD = 11.68;
+
+function pricePerTicket(qty) {
+  return qty === PROMO_QTY ? PROMO_PRICE_USD : PRICE_USD;
+}
+
+// Compara el monto cobrado (en centavos) contra cada cantidad posible y
+// devuelve la que mejor coincide; si nada coincide razonablemente, recurre
+// al optionalParameter1 como respaldo.
+function quantityFromAmount(amountCents, fallbackParam) {
+  for (let qty = 1; qty <= MAX_QTY; qty++) {
+    const expected = Math.round(pricePerTicket(qty) * qty * 100);
+    if (Math.abs(expected - amountCents) <= 1) return qty;
+  }
+  return Math.max(1, parseInt(fallbackParam, 10) || 1);
+}
+
 const resend = new Resend(RESEND_API_KEY);
 
 // Protege contra llamadas externas (correo, webhook) que se queden colgadas:
@@ -96,22 +120,30 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
   const groupLabel = ticketGroupLabel(quantity);
   const waText = encodeURIComponent(`Hola, tengo una consulta sobre mi ticket/QR ya adquirido para ${EVENT.name}.`);
 
+  const greetingName = cardholderName ? ` <strong>${cardholderName}</strong>` : '';
+  const intro = quantity > 1
+    ? `Gracias por asegurar tu entrada para <strong>${EVENT.name}</strong> — este ticket es para tu grupo de ${quantity} personas (tú + ${quantity - 1} acompañante${quantity - 1 > 1 ? 's' : ''}). Estamos felices de que formes parte, ¡deben ingresar todos juntos! Nos vemos en la pista de baile.`
+    : `Gracias por asegurar tu entrada para <strong>${EVENT.name}</strong>. Estamos felices de que formes parte, ¡preséntalo (impreso o en tu celular) en la entrada! Nos vemos en la pista de baile.`;
+
+  // Meta de esquema de color forzado a "light": sin esto, varios clientes de
+  // correo en celular (Gmail/Apple Mail en modo oscuro) invierten los fondos
+  // oscuros a blanco y dejan el texto amarillo/blanco invisible.
   const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="color-scheme" content="light">
+      <meta name="supported-color-schemes" content="light">
+    </head>
+    <body style="margin:0; padding:0; background:#f4f4f4;">
     <div style="font-family: Arial, sans-serif; max-width: 420px; margin: 0 auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #eee;">
 
-      <div style="background-image: linear-gradient(180deg, rgba(10,10,10,0.55), rgba(10,10,10,0.8)), url('https://rubyhazemusic.com/eventos/para%20ticket.png'); background-size:cover; background-position:center; padding:24px; text-align:center;">
-        <div style="margin-bottom:12px; font-size:0;"><img src="https://rubyhazemusic.com/eventos/rhz%20blanco.png" alt="Ruby Haze" width="140" style="display:inline-block; vertical-align:middle; margin:0;"><img src="https://rubyhazemusic.com/eventos/kuno%20logo%20blanco.png" alt="Kuno Seafood" width="140" style="display:inline-block; vertical-align:middle; margin:0;"></div>
-        <p style="color:${TICKET_ACCENT}; font-weight:900; font-size:34px; letter-spacing:0.04em; text-transform:uppercase; margin:0; text-shadow:0 2px 6px rgba(0,0,0,0.7); line-height:1.1;">${EVENT.name}</p>
-        <p style="color:#ffffff; font-size:12px; margin:6px 0 0; text-shadow:0 1px 4px rgba(0,0,0,0.7);">${EVENT.date} · ${EVENT.place}</p>
-      </div>
+      <img src="https://rubyhazemusic.com/eventos/ticket-header.png" alt="${EVENT.name}" width="420" style="display:block; width:100%; max-width:420px; height:auto;">
 
       <div style="padding:26px 24px 4px;">
-        <p style="margin:0 0 4px; color:#111111; font-size:14px; text-align:center;">Hola <strong>${cardholderName || ''}</strong>,</p>
-        <p style="margin:0; color:#555555; font-size:13px; line-height:1.6; text-align:center;">${
-          quantity > 1
-            ? `Gracias por tu compra. Este ticket es para tu grupo de ${quantity} personas (tú + ${quantity - 1} acompañante${quantity - 1 > 1 ? 's' : ''}) — preséntalo en la entrada y deben ingresar todos juntos.`
-            : 'Gracias por tu compra. Este es tu ticket — preséntalo (impreso o en tu celular) en la entrada del evento.'
-        }</p>
+        <p style="margin:0 0 4px; color:#111111; font-size:14px; text-align:center;">Hola${greetingName},</p>
+        <p style="margin:0; color:#555555; font-size:13px; line-height:1.6; text-align:center;">${intro}</p>
       </div>
 
       <div style="border-top:2px dashed #dddddd; margin:22px 24px 0;"></div>
@@ -119,20 +151,26 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
       <div style="padding:22px 24px; text-align:center;">
         <img src="${qrUrl}" alt="Código QR del ticket" width="220" height="220">
         <p style="color:#bbbbbb; font-size:11px; letter-spacing:0.04em; margin:10px 0 4px;">${ticketCode}</p>
-        <p style="display:inline-block; background:#0a0a0a; color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; padding:6px 14px; border-radius:14px; margin-top:4px;">${groupLabel}</p>
+        <p style="display:inline-block; background:#0a0a0a !important; color:${TICKET_ACCENT} !important; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; padding:6px 14px; border-radius:14px; margin-top:4px;">${groupLabel}</p>
       </div>
 
-      <div style="background:#0a0a0a; padding:18px 24px; text-align:center;">
-        <p style="color:rgba(255,255,255,0.5); font-size:11px; margin:0 0 8px;">¿Tienes dudas? Escríbenos por WhatsApp o correo:</p>
+      <div style="background:#0a0a0a !important; padding:18px 24px; text-align:center;">
+        <p style="color:rgba(255,255,255,0.5) !important; font-size:11px; margin:0 0 8px;">¿Tienes dudas? Escríbenos por WhatsApp o correo:</p>
         <p style="margin:0 0 6px; font-size:12px;">
-          <a href="mailto:${TICKET_CONTACT_EMAIL}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
+          <a href="mailto:${TICKET_CONTACT_EMAIL}" style="color:${TICKET_ACCENT} !important; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
         </p>
         <p style="margin:0; font-size:12px;">
-          ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
+          ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" style="color:${TICKET_ACCENT} !important; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
         </p>
+      </div>
+
+      <div style="padding:14px 24px; text-align:center;">
+        <p style="margin:0; color:#999999; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">Ruby Haze Team</p>
       </div>
 
     </div>
+    </body>
+    </html>
   `;
 
   const { error } = await resend.emails.send({
@@ -226,11 +264,15 @@ app.post('/api/payphone/confirm', async (req, res) => {
       }
       usedTransactions.add(transactionId);
 
-      const quantity = Math.max(1, parseInt(data.optionalParameter1, 10) || 1);
+      const quantity = quantityFromAmount(Number(data.amount), data.optionalParameter1);
+      // optionalParameter2 es el nombre que el comprador escribió en nuestra
+      // propia página; optionalParameter4 es el que Payphone autocompleta
+      // desde el formulario de tarjeta, pero no siempre llega.
+      const cardholderName = (data.optionalParameter2 || data.optionalParameter4 || '').trim();
       const ticketCode = `RH-${data.transactionId}`;
       const listNumber = registerIssuedTicket(ticketCode, {
         transactionId: data.transactionId,
-        cardholderName: data.optionalParameter4,
+        cardholderName,
         document: data.document,
         quantity
       });
@@ -240,7 +282,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
         email: data.email,
         phoneNumber: data.phoneNumber,
         document: data.document,
-        cardholderName: data.optionalParameter4,
+        cardholderName,
         quantity,
         ticketCode,
         listNumber

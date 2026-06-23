@@ -38,7 +38,7 @@
     z-index: -1;
     background:
       linear-gradient(180deg, rgba(10,10,10,0.6), rgba(10,10,10,0.78)),
-      url('eventos/gustavo%20web.jpg') center/cover no-repeat;
+      url('eventos/gustavo%20web.jpg') center 18%/cover no-repeat;
   }
 
   h1{
@@ -181,6 +181,29 @@
     box-shadow:0 4px 16px rgba(162,3,26,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
   }
 
+  .name-field{ text-align:center; margin-bottom: 22px; }
+  .name-field label{
+    display:block;
+    color:#111111;
+    font-weight:700;
+    font-size:0.8rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  .name-field input{
+    width:100%;
+    max-width:320px;
+    padding:13px 16px;
+    border-radius:10px;
+    border:1.5px solid #dddddd;
+    font-size:0.95rem;
+    text-align:center;
+    font-family:'Google Sans Flex', sans-serif;
+  }
+  .name-field input:focus{ outline:none; border-color: var(--red); }
+  .name-field .name-hint{ display:none; color: var(--red); font-size:0.78rem; margin-top:8px; }
+
   .qty-selector{ text-align:center; margin-bottom: 22px; }
   .qty-label{
     display:block;
@@ -297,6 +320,12 @@
     <div class="pp-card">
       <p class="pay-instructions">Puedes pagar con tarjeta de crédito o débito de cualquier banco, sin problema, de forma segura gracias a Payphone. Cada entrada llegará a tu correo como un ticket con su propio código QR.</p>
 
+      <div class="name-field">
+        <label for="buyerName">Nombre y apellido (para tu ticket)</label>
+        <input type="text" id="buyerName" placeholder="Ej. María Pérez" autocomplete="name">
+        <p class="name-hint" id="nameHint">Escribe tu nombre completo para continuar con el pago.</p>
+      </div>
+
       <div class="qty-selector">
         <div class="promo-banner">Promo: $11.68 c/u<br>comprando en grupo de 5 tickets</div>
         <span class="qty-label">Cantidad de tickets</span>
@@ -372,15 +401,27 @@
   const qtyNoteEl = document.getElementById('qtyNote');
   const qtyMinusBtn = document.getElementById('qtyMinus');
   const qtyPlusBtn = document.getElementById('qtyPlus');
+  const buyerNameInput = document.getElementById('buyerName');
+  const nameHintEl = document.getElementById('nameHint');
+  let nameTouched = false;
 
   function pricePerTicket(qty){
     return qty === PROMO_QTY ? PROMO_PRICE_USD : CONFIG.priceUSD;
   }
 
   function renderPaymentButton(){
+    const name = buyerNameInput.value.trim();
+    const ppButtonEl = document.getElementById('pp-button');
+    ppButtonEl.innerHTML = '';
+
+    if(!name){
+      nameHintEl.style.display = nameTouched ? 'block' : 'none';
+      return;
+    }
+    nameHintEl.style.display = 'none';
+
     const amountCents = Math.round(pricePerTicket(quantity) * quantity * 100);
     const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-    document.getElementById('pp-button').innerHTML = '';
     new PPaymentButtonBox({
       token: CONFIG.payphoneToken,
       clientTransactionId,
@@ -392,9 +433,15 @@
       storeId: CONFIG.payphoneStoreId,
       reference: `Ticket Ruby Haze x${quantity}`,
       optionalParameter1: String(quantity),
+      optionalParameter2: name,
       lang: 'es'
     }).render('pp-button');
   }
+
+  buyerNameInput.addEventListener('blur', () => { nameTouched = true; renderPaymentButton(); });
+  buyerNameInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); renderPaymentButton(); }
+  });
 
   function updateQty(newQty){
     quantity = Math.min(MAX_QTY, Math.max(1, newQty));

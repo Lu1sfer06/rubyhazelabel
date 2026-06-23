@@ -14,10 +14,19 @@
     --yellow: #dbce44;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
-  body{
+  /* Fondo fijo al tamaño de la pantalla: pintado directo en body,
+     background-size:cover se calcula contra todo el alto de la página
+     (más alto que la pantalla si hay scroll) y se recorta mal en móvil. */
+  .bg-photo{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background:
       linear-gradient(180deg, rgba(10,10,10,0.6), rgba(10,10,10,0.78)),
-      url('eventos/gustavo%20web.jpg') center/cover no-repeat;
+      url('eventos/gustavo%20web.jpg') center 18%/cover no-repeat;
+  }
+  body{
+    background: #0a0a0a;
     color: rgba(255,255,255,0.88);
     font-family: 'Google Sans Flex', sans-serif;
     font-weight: 300;
@@ -162,6 +171,7 @@
 </style>
 </head>
 <body>
+<div class="bg-photo"></div>
 <main>
 
   <div class="spinner-wrap" id="loadingScreen">

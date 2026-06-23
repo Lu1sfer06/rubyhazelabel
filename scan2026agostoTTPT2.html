@@ -219,7 +219,8 @@
         return;
       }
       if(data.used){
-        showFail('Ya fue aprobado antes' + (data.usedAt ? ' (' + new Date(data.usedAt).toLocaleTimeString() + ')' : ''));
+        const who = data.cardholderName ? ' — ' + data.cardholderName + ' (Lista #' + data.listNumber + ')' : '';
+        showFail('Ya fue aprobado antes' + who + (data.usedAt ? ' · ' + new Date(data.usedAt).toLocaleTimeString() : ''));
         return;
       }
 
