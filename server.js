@@ -140,9 +140,8 @@ function ticketGroupLabel(quantity) {
 // las filas en blanco para los acompañantes cuando quantity > 1. Si no está
 // configurado o falla, no debe afectar la compra en curso: va en segundo
 // plano y solo se registra el error en consola.
-function syncToSheet(ticket) {
-  if (!SHEETS_WEBHOOK_URL) return;
-  fetch(SHEETS_WEBHOOK_URL, {
+function postToSheetWebhook(ticket) {
+  return fetch(SHEETS_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -152,7 +151,34 @@ function syncToSheet(ticket) {
       quantity: ticket.quantity,
       transactionId: ticket.transactionId
     })
-  }).catch((err) => console.error('Error sincronizando con Google Sheets:', err));
+  }).then(async (res) => {
+    // Apps Script responde HTTP 200 incluso cuando falla (ej. timeout del
+    // lock), así que revisar solo el status no detecta nada: hay que leer
+    // el body y confirmar ok:true.
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+    if (!data || data.ok !== true) {
+      throw new Error('respuesta sin éxito: ' + text);
+    }
+  });
+}
+
+// Dos compras casi simultáneas pueden hacer que la segunda espere el lock
+// del script de Sheets y, si tarda demasiado, falle; un reintento cubre ese
+// caso transitorio sin tener que volver a meter la fila a mano.
+async function syncToSheet(ticket) {
+  if (!SHEETS_WEBHOOK_URL) return;
+  try {
+    await postToSheetWebhook(ticket);
+  } catch (err) {
+    console.error('Sheets webhook falló en el primer intento para', ticket.transactionId, '-', err.message, '- reintentando...');
+    try {
+      await postToSheetWebhook(ticket);
+    } catch (err2) {
+      console.error('Sheets webhook falló también en el reintento para', ticket.transactionId, '-', err2.message);
+    }
+  }
 }
 
 const TICKET_ACCENT = '#dbce44';
