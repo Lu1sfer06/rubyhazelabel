@@ -352,7 +352,11 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   y += footerH;
 
   const totalH = Math.ceil(y);
-  const svg = `<svg width="${WIDTH}" height="${totalH}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
+  // El SVG se dibuja en coordenadas "lógicas" de WIDTH px, pero se exporta
+  // a 1.5x de tamaño real (viewBox vs width/height) para que se vea nítido
+  // en pantallas de celular modernas sin tener que recalcular el diseño.
+  const OUTPUT_SCALE = 1.5;
+  const svg = `<svg width="${WIDTH * OUTPUT_SCALE}" height="${totalH * OUTPUT_SCALE}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="${WIDTH}" height="${totalH}" fill="#ffffff"/>
     <image x="0" y="0" width="${WIDTH}" height="${headerH}" href="data:image/png;base64,${TICKET_HEADER_IMAGE_B64}"/>
     ${parts.join('\n')}
@@ -385,9 +389,9 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
   const guestBanner = isGuest ? `
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td bgcolor="${TICKET_ACCENT}" style="background:linear-gradient(135deg, #f0e58a, ${TICKET_ACCENT} 45%, #b8972a); padding:14px 24px; text-align:center;">
-            <p style="margin:0; color:#0a0a0a; font-size:10px; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; font-family:Arial, sans-serif;">Ruby Haze Guest Ticket</p>
-            <p style="margin:2px 0 0; color:#0a0a0a; font-size:24px; letter-spacing:0.04em; font-weight:900; text-transform:uppercase; font-family:Arial, sans-serif;">Invitado / A</p>
+          <td bgcolor="${TICKET_ACCENT}" class="rh-bg-gold" style="background:linear-gradient(135deg, #f0e58a, ${TICKET_ACCENT} 45%, #b8972a); padding:14px 24px; text-align:center;">
+            <p class="rh-text-black" style="margin:0; color:#0a0a0a; font-size:10px; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; font-family:Arial, sans-serif;">Ruby Haze Guest Ticket</p>
+            <p class="rh-text-black" style="margin:2px 0 0; color:#0a0a0a; font-size:24px; letter-spacing:0.04em; font-weight:900; text-transform:uppercase; font-family:Arial, sans-serif;">Invitado / A</p>
           </td>
         </tr>
       </table>
@@ -403,6 +407,16 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
       <meta charset="UTF-8">
       <meta name="color-scheme" content="light">
       <meta name="supported-color-schemes" content="light">
+      <style>
+        /* Gmail (sobre todo en la app de celular) a veces invierte colores
+           en modo oscuro aunque se le pida quedarse en claro. [data-ogsc]
+           es el selector que Gmail usa internamente para eso — forzando
+           ahí los mismos colores se neutraliza la inversión. */
+        [data-ogsc] .rh-bg-dark, [data-ogsb] .rh-bg-dark { background-color: #0a0a0a !important; }
+        [data-ogsc] .rh-bg-gold, [data-ogsb] .rh-bg-gold { background-color: #dbce44 !important; }
+        [data-ogsc] .rh-text-gold, [data-ogsb] .rh-text-gold { color: #dbce44 !important; }
+        [data-ogsc] .rh-text-black, [data-ogsb] .rh-text-black { color: #0a0a0a !important; }
+      </style>
     </head>
     <body style="margin:0; padding:0; background:#f4f4f4;">
     <div style="font-family: Arial, sans-serif; max-width: 420px; margin: 0 auto; background:#ffffff; border-radius:18px; overflow:hidden; border:${isGuest ? `2px solid ${TICKET_ACCENT}` : '1px solid #eee'};">
@@ -423,15 +437,15 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
         <p style="color:#bbbbbb; font-size:11px; letter-spacing:0.04em; margin:10px 0 4px;">${ticketCode}</p>
         <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:4px auto 0;">
           <tr>
-            <td bgcolor="#0a0a0a" style="background-color:#0a0a0a; border-radius:14px; padding:6px 14px;">
-              <span style="color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; font-family:Arial, sans-serif;">${groupLabel}</span>
+            <td bgcolor="#0a0a0a" class="rh-bg-dark" style="background-color:#0a0a0a; border-radius:14px; padding:6px 14px;">
+              <span class="rh-text-gold" style="color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; font-family:Arial, sans-serif;">${groupLabel}</span>
             </td>
           </tr>
         </table>
         <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:18px auto 0;">
           <tr>
-            <td bgcolor="${TICKET_ACCENT}" style="background-color:${TICKET_ACCENT}; border-radius:10px;">
-              <a href="https://rubyhazemusic.com/api/tickets/image/${encodeURIComponent(ticketCode)}" style="display:block; padding:11px 22px; color:#0a0a0a; font-weight:800; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; text-decoration:none; font-family:Arial, sans-serif;">Descargar tu ticket</a>
+            <td bgcolor="${TICKET_ACCENT}" class="rh-bg-gold" style="background-color:${TICKET_ACCENT}; border-radius:10px;">
+              <a href="https://rubyhazemusic.com/api/tickets/image/${encodeURIComponent(ticketCode)}" class="rh-text-black" style="display:block; padding:11px 22px; color:#0a0a0a; font-weight:800; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; text-decoration:none; font-family:Arial, sans-serif;">Descargar tu ticket</a>
             </td>
           </tr>
         </table>
@@ -439,13 +453,13 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td bgcolor="#0a0a0a" style="background-color:#0a0a0a; padding:18px 24px; text-align:center;">
+          <td bgcolor="#0a0a0a" class="rh-bg-dark" style="background-color:#0a0a0a; padding:18px 24px; text-align:center;">
             <p style="color:#cccccc; font-size:11px; margin:0 0 8px; font-family:Arial, sans-serif;">¿Tienes dudas? Escríbenos por WhatsApp o correo:</p>
             <p style="margin:0 0 6px; font-size:12px; font-family:Arial, sans-serif;">
-              <a href="mailto:${TICKET_CONTACT_EMAIL}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
+              <a href="mailto:${TICKET_CONTACT_EMAIL}" class="rh-text-gold" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
             </p>
             <p style="margin:0; font-size:12px; font-family:Arial, sans-serif;">
-              ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
+              ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" class="rh-text-gold" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
             </p>
           </td>
         </tr>
