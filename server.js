@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 3000;
 const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
 const SCAN_PASSWORD = (process.env.SCAN_PASSWORD || '').trim();
+const SHEETS_WEBHOOK_URL = (process.env.SHEETS_WEBHOOK_URL || '').trim();
+const SHEETS_WEBHOOK_SECRET = (process.env.SHEETS_WEBHOOK_SECRET || '').trim();
 
 // EDITAR: datos del evento mostrados en el correo del ticket.
 const EVENT = {
@@ -128,6 +130,29 @@ function ticketRemaining(ticket) {
 
 function ticketGroupLabel(quantity) {
   return quantity === 1 ? 'Entrada individual' : `Entrada de ${quantity} personas`;
+}
+
+// Empuja cada venta y cada ingreso aprobado a una Google Sheet (vía un Apps
+// Script Web App propio, ver instrucciones aparte) para tener la lista de
+// ventas actualizada en vivo sin depender de abrir el servidor. Si no está
+// configurado o falla, no debe afectar la compra/aprobación en curso: va en
+// segundo plano y solo se registra el error en consola.
+function syncToSheet(code, ticket) {
+  if (!SHEETS_WEBHOOK_URL) return;
+  fetch(SHEETS_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      secret: SHEETS_WEBHOOK_SECRET,
+      code,
+      listNumber: ticket.listNumber,
+      cardholderName: ticket.cardholderName,
+      document: ticket.document,
+      quantity: ticket.quantity,
+      entriesApproved: ticket.entriesApproved,
+      usedAt: ticket.usedAt
+    })
+  }).catch((err) => console.error('Error sincronizando con Google Sheets:', err));
 }
 
 const TICKET_ACCENT = '#dbce44';
@@ -333,6 +358,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
         document: data.document,
         quantity
       });
+      syncToSheet(ticketCode, issuedTickets[ticketCode]);
 
       const ticket = {
         transactionId: data.transactionId,
@@ -423,6 +449,7 @@ app.post('/api/tickets/approve', requireScanKey, (req, res) => {
   ticket.entriesApproved = (typeof ticket.entriesApproved === 'number' ? ticket.entriesApproved : 0) + count;
   ticket.usedAt = new Date().toISOString();
   saveIssuedTickets();
+  syncToSheet(code, ticket);
 
   res.json({
     approved: true,
