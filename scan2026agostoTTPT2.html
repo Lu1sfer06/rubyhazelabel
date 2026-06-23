@@ -12,19 +12,23 @@
 <style>
   :root{ --yellow: #dbce44; }
   *{ box-sizing: border-box; }
-  html, body{ touch-action: manipulation; }
+  html, body{ touch-action: manipulation; height:100%; overflow:hidden; }
   body{
     margin:0;
-    min-height:100vh;
+    height:100vh;
+    height:100dvh;
     background:#0a0a0a;
     color:#ffffff;
     font-family:'Google Sans Flex', sans-serif;
     font-weight:300;
+    display:flex;
+    flex-direction:column;
   }
   header{
     background:#000000;
-    padding:18px 6%;
+    padding:8px 6%;
     text-align:center;
+    flex:0 0 auto;
   }
   header h1{
     margin:0;
@@ -32,11 +36,22 @@
     font-weight:900;
     letter-spacing:0.04em;
     text-transform:uppercase;
-    font-size:1.3rem;
+    font-size:1.05rem;
   }
-  header p{ margin:4px 0 0; font-size:0.8rem; color:rgba(255,255,255,0.6); }
+  header p{ margin:2px 0 0; font-size:0.7rem; color:rgba(255,255,255,0.6); }
 
-  main{ max-width:480px; margin:0 auto; padding:24px 6% 60px; text-align:center; }
+  main{
+    max-width:480px;
+    width:100%;
+    margin:0 auto;
+    padding:10px 5%;
+    text-align:center;
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    overflow:hidden;
+  }
 
   .gate{ margin-top:60px; }
   .gate input{
@@ -65,42 +80,49 @@
   }
   .gate-error{ color:#ff6b6b; font-size:0.85rem; margin-top:10px; display:none; }
 
-  #reader{ width:100%; border-radius:16px; overflow:hidden; margin-top:10px; }
+  #scannerWrap{ flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+
+  #reader{ width:100%; border-radius:16px; overflow:hidden; margin-top:6px; flex:0 1 auto; min-height:0; }
+  #reader video{ max-height:100%; object-fit:cover; }
 
   .result{
-    margin-top:18px;
-    padding:18px;
+    margin-top:8px;
+    padding:14px;
     border-radius:14px;
     font-weight:800;
-    font-size:1.05rem;
+    font-size:0.95rem;
     display:none;
+    flex:1 1 auto;
+    overflow:hidden;
+    flex-direction:column;
+    justify-content:center;
   }
   .result.ok{ background: rgba(46, 204, 113, 0.15); border:2px solid #2ecc71; color:#2ecc71; }
   .result.fail{ background: rgba(255, 107, 107, 0.15); border:2px solid #ff6b6b; color:#ff6b6b; }
   .result.pending{ background: rgba(219, 206, 68, 0.15); border:2px solid var(--yellow); color: var(--yellow); }
-  .result .code{ display:block; font-size:0.8rem; font-weight:500; color:#ffffff; margin-top:10px; }
+  .result .code{ display:block; font-size:0.75rem; font-weight:500; color:#ffffff; margin-top:8px; }
 
-  .result-details{ margin-top:10px; }
-  .result-details p{ margin:4px 0; font-size:0.95rem; color:#ffffff; font-weight:500; }
+  .result-details{ margin-top:8px; }
+  .result-details p{ margin:3px 0; font-size:0.88rem; color:#ffffff; font-weight:500; }
 
-  .approve-qty{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:14px; }
-  .approve-qty span{ font-size:0.85rem; color:rgba(255,255,255,0.7); }
+  .approve-qty{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:10px; }
+  .approve-qty span{ font-size:0.8rem; color:rgba(255,255,255,0.7); }
   .approve-qty-btn{
-    width:36px; height:36px; border-radius:10px; border:none;
+    width:34px; height:34px; border-radius:10px; border:none;
     background:rgba(255,255,255,0.12); color:#ffffff; font-size:1.1rem;
     font-weight:800; cursor:pointer; touch-action: manipulation; user-select: none;
   }
   .approve-qty-btn:disabled{ opacity:0.3; cursor:not-allowed; }
-  #approveQtyValue{ font-size:1.2rem; font-weight:800; color: var(--yellow); min-width:28px; display:inline-block; }
+  #approveQtyValue{ font-size:1.1rem; font-weight:800; color: var(--yellow); min-width:28px; display:inline-block; }
 
-  .result-actions{ display:flex; gap:10px; margin-top:14px; }
+  .result-actions{ display:flex; gap:10px; margin-top:10px; }
   .approve-btn, .cancel-btn{
     flex:1;
     border:none;
     border-radius:10px;
-    padding:14px;
+    padding:12px;
     font-weight:800;
-    font-size:0.8rem;
+    font-size:0.78rem;
     letter-spacing:0.05em;
     text-transform:uppercase;
     cursor:pointer;
@@ -110,7 +132,7 @@
   .approve-btn{ background:#2ecc71; color:#0a0a0a; }
   .cancel-btn{ background:rgba(255,255,255,0.1); color:#ffffff; }
 
-  .stats{ margin-top:16px; font-size:0.8rem; color:rgba(255,255,255,0.5); }
+  .stats{ margin:6px 0 0; font-size:0.75rem; color:rgba(255,255,255,0.5); flex:0 0 auto; }
 </style>
 </head>
 <body>
@@ -161,6 +183,7 @@
   const gateBtn = document.getElementById('gateBtn');
   const gateError = document.getElementById('gateError');
   const scannerWrap = document.getElementById('scannerWrap');
+  const readerEl = document.getElementById('reader');
   const result = document.getElementById('result');
   const resultMain = document.getElementById('resultMain');
   const resultDetails = document.getElementById('resultDetails');
@@ -198,7 +221,7 @@
 
   function startScanner(){
     gate.style.display = 'none';
-    scannerWrap.style.display = 'block';
+    scannerWrap.style.display = 'flex';
 
     scanner = new Html5Qrcode('reader');
     scanner.start(
@@ -216,12 +239,14 @@
     resultDetails.style.display = 'none';
     approveQtyWrap.style.display = 'none';
     resultActions.style.display = 'none';
-    result.style.display = 'block';
+    result.style.display = 'flex';
+    readerEl.style.display = 'none';
     setTimeout(resumeScanning, 1800);
   }
 
   function resumeScanning(){
     result.style.display = 'none';
+    readerEl.style.display = 'block';
     pendingCode = '';
     busy = false;
     if(scanner) scanner.resume();
@@ -281,7 +306,8 @@
       }
 
       resultActions.style.display = 'flex';
-      result.style.display = 'block';
+      result.style.display = 'flex';
+      readerEl.style.display = 'none';
     } catch(err){
       showFail('Error de conexión, intenta de nuevo');
     }
