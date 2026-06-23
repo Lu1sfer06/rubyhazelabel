@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Escaneo de Tickets | Ruby Haze</title>
 <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,6 +12,7 @@
 <style>
   :root{ --yellow: #dbce44; }
   *{ box-sizing: border-box; }
+  html, body{ touch-action: manipulation; }
   body{
     margin:0;
     min-height:100vh;
@@ -87,7 +88,7 @@
   .approve-qty-btn{
     width:36px; height:36px; border-radius:10px; border:none;
     background:rgba(255,255,255,0.12); color:#ffffff; font-size:1.1rem;
-    font-weight:800; cursor:pointer;
+    font-weight:800; cursor:pointer; touch-action: manipulation; user-select: none;
   }
   .approve-qty-btn:disabled{ opacity:0.3; cursor:not-allowed; }
   #approveQtyValue{ font-size:1.2rem; font-weight:800; color: var(--yellow); min-width:28px; display:inline-block; }
@@ -103,6 +104,8 @@
     letter-spacing:0.05em;
     text-transform:uppercase;
     cursor:pointer;
+    touch-action: manipulation;
+    user-select: none;
   }
   .approve-btn{ background:#2ecc71; color:#0a0a0a; }
   .cancel-btn{ background:rgba(255,255,255,0.1); color:#ffffff; }
