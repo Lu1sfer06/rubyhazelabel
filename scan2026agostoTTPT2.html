@@ -82,18 +82,19 @@
 
   #scannerWrap{ flex:1 1 auto; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 
-  #reader{ width:100%; border-radius:16px; overflow:hidden; margin-top:6px; flex:0 1 auto; min-height:0; }
+  #reader{ width:100%; border-radius:16px; overflow:hidden; margin-top:6px; flex:1 1 auto; min-height:100px; }
   #reader video{ max-height:100%; object-fit:cover; }
+  #scannerWrap.compact #reader{ flex:0 0 86px; min-height:86px; }
 
   .result{
     margin-top:8px;
-    padding:14px;
+    padding:10px 14px;
     border-radius:14px;
     font-weight:800;
-    font-size:0.95rem;
+    font-size:0.9rem;
     display:none;
     flex:1 1 auto;
-    overflow:hidden;
+    overflow-y:auto;
     flex-direction:column;
     justify-content:center;
   }
@@ -201,6 +202,19 @@
   const approveQtyMinus = document.getElementById('approveQtyMinus');
   const approveQtyPlus = document.getElementById('approveQtyPlus');
 
+  // touch-action: manipulation en cada botón no alcanza cuando dos toques
+  // rápidos caen en botones distintos (ej. tocar + dos veces seguidas): el
+  // navegador lo puede interpretar como doble-tap y hacer zoom. Esto lo
+  // bloquea a nivel de documento sin importar en qué elemento se toque.
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if(now - lastTouchEnd <= 350){
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+
   let scanKey = sessionStorage.getItem('rh_scan_key') || '';
   let scannedCount = 0;
   let busy = false;
@@ -240,13 +254,13 @@
     approveQtyWrap.style.display = 'none';
     resultActions.style.display = 'none';
     result.style.display = 'flex';
-    readerEl.style.display = 'none';
+    scannerWrap.classList.add('compact');
     setTimeout(resumeScanning, 1800);
   }
 
   function resumeScanning(){
     result.style.display = 'none';
-    readerEl.style.display = 'block';
+    scannerWrap.classList.remove('compact');
     pendingCode = '';
     busy = false;
     if(scanner) scanner.resume();
@@ -307,7 +321,7 @@
 
       resultActions.style.display = 'flex';
       result.style.display = 'flex';
-      readerEl.style.display = 'none';
+      scannerWrap.classList.add('compact');
     } catch(err){
       showFail('Error de conexión, intenta de nuevo');
     }
