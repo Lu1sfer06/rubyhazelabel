@@ -331,10 +331,10 @@
         <span class="qty-label">Cantidad de tickets</span>
         <div class="qty-control">
           <button type="button" class="qty-btn" id="qtyMinus" aria-label="Restar ticket">&minus;</button>
-          <span id="qtyValue">1</span>
+          <span id="qtyValue">0</span>
           <button type="button" class="qty-btn" id="qtyPlus" aria-label="Sumar ticket">+</button>
         </div>
-        <p class="qty-total">Total a pagar: <strong id="qtyTotal">$15.92</strong></p>
+        <p class="qty-total" id="qtyTotalRow" style="display:none;">Total a pagar: <strong id="qtyTotal">$0.00</strong></p>
         <p class="qty-note" id="qtyNote" style="display:none;">El ticket llega solo a la persona que lo compra, ¡pero no te preocupes! Queda registrada la cantidad de acompañantes dentro del mismo. Si tienes dudas, nuestros contactos están al final de esta página.</p>
       </div>
 
@@ -394,9 +394,10 @@
   const MAX_QTY = 5;
   const PROMO_QTY = 5;
   const PROMO_PRICE_USD = 11.68; // grupo de 5: cada entrada deja $11 netos tras la comisión de Payphone
-  let quantity = 1;
+  let quantity = 0;
 
   const qtyValueEl = document.getElementById('qtyValue');
+  const qtyTotalRowEl = document.getElementById('qtyTotalRow');
   const qtyTotalEl = document.getElementById('qtyTotal');
   const qtyNoteEl = document.getElementById('qtyNote');
   const qtyMinusBtn = document.getElementById('qtyMinus');
@@ -428,6 +429,10 @@
     }
     nameHintEl.style.display = 'none';
 
+    if(quantity < 1){
+      return;
+    }
+
     const amountCents = Math.round(pricePerTicket(quantity) * quantity * 100);
     const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     new PPaymentButtonBox({
@@ -452,15 +457,16 @@
   });
 
   function updateQty(newQty){
-    quantity = Math.min(MAX_QTY, Math.max(1, newQty));
+    quantity = Math.min(MAX_QTY, Math.max(0, newQty));
     const unitPrice = pricePerTicket(quantity);
     const total = unitPrice * quantity;
     qtyValueEl.textContent = quantity;
+    qtyTotalRowEl.style.display = quantity >= 1 ? 'block' : 'none';
     qtyTotalEl.textContent = quantity > 1
       ? `$${total.toFixed(2)} ($${unitPrice.toFixed(2)} c/u)`
       : `$${total.toFixed(2)}`;
     qtyNoteEl.style.display = quantity > 1 ? 'block' : 'none';
-    qtyMinusBtn.disabled = quantity <= 1;
+    qtyMinusBtn.disabled = quantity <= 0;
     qtyPlusBtn.disabled = quantity >= MAX_QTY;
     renderPaymentButton();
   }
@@ -469,7 +475,7 @@
   qtyPlusBtn.addEventListener('click', () => updateQty(quantity + 1));
 
   window.addEventListener('DOMContentLoaded', () => {
-    updateQty(1);
+    updateQty(0);
   });
 </script>
 
