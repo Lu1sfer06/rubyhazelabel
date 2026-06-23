@@ -282,6 +282,28 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
   if (error) throw new Error(typeof error === 'string' ? error : JSON.stringify(error));
 }
 
+// Reintenta hasta 4 veces (con pausa de 1.5s entre cada una) tanto si
+// Payphone responde sin transactionStatus todavía como si la llamada falla
+// del todo (timeout, error de red): un solo hiccup puntual con Payphone no
+// debe perder una venta cuya tarjeta ya fue cobrada.
+async function payphoneConfirmWithRetries(payload, maxAttempts = 4) {
+  let lastData = null;
+  let lastErr = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const { data } = await payphonePost('/api/button/V2/Confirm', payload);
+      lastData = data;
+      lastErr = null;
+      if (data.transactionStatus) return data;
+    } catch (err) {
+      lastErr = err;
+    }
+    if (attempt < maxAttempts - 1) await sleep(1500);
+  }
+  if (lastData) return lastData;
+  throw lastErr;
+}
+
 app.use(express.static(__dirname));
 app.use(express.json());
 
@@ -359,17 +381,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
   const payload = { id: transactionId, clientTxId: clientTransactionId };
 
   try {
-    let { data } = await payphonePost('/api/button/V2/Confirm', payload);
-
-    // Justo después del redirect, Payphone a veces todavía no terminó de
-    // resolver el estado interno de la transacción. Reintentamos un par de
-    // veces con una breve espera antes de darla por desconocida.
-    let attempts = 0;
-    while (!data.transactionStatus && attempts < 3) {
-      await sleep(1500);
-      ({ data } = await payphonePost('/api/button/V2/Confirm', payload));
-      attempts++;
-    }
+    const data = await payphoneConfirmWithRetries(payload);
 
     if (data.transactionStatus === 'Approved') {
       // Se marca como usada ANTES de responder: si dos peticiones llegan casi
