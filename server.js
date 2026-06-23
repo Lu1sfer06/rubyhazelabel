@@ -401,6 +401,18 @@ app.post('/api/payphone/confirm', async (req, res) => {
       const pending = pendingPurchases.get(clientTransactionId);
       pendingPurchases.delete(clientTransactionId);
       const cardholderName = (pending && pending.cardholderName) || (data.optionalParameter4 || '').trim();
+      // TEMPORAL: para diagnosticar por qué a veces no llega correo/teléfono
+      // al Sheet — confirma qué campos manda Payphone realmente. Quitar una
+      // vez resuelto.
+      console.log('Payphone Confirm data (Approved):', JSON.stringify({
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        document: data.document,
+        optionalParameter1: data.optionalParameter1,
+        optionalParameter2: data.optionalParameter2,
+        optionalParameter3: data.optionalParameter3,
+        optionalParameter4: data.optionalParameter4
+      }));
       const ticketCode = `RH-${data.transactionId}`;
       const listNumber = registerIssuedTicket(ticketCode, {
         transactionId: data.transactionId,
