@@ -132,25 +132,25 @@ function ticketGroupLabel(quantity) {
   return quantity === 1 ? 'Entrada individual' : `Entrada de ${quantity} personas`;
 }
 
-// Empuja cada venta y cada ingreso aprobado a una Google Sheet (vía un Apps
-// Script Web App propio, ver instrucciones aparte) para tener la lista de
-// ventas actualizada en vivo sin depender de abrir el servidor. Si no está
-// configurado o falla, no debe afectar la compra/aprobación en curso: va en
-// segundo plano y solo se registra el error en consola.
-function syncToSheet(code, ticket) {
+// Empuja cada venta a una Google Sheet (vía un Apps Script Web App propio,
+// ver sheets-apps-script.js) para tener la lista de ventas actualizada en
+// vivo sin depender de abrir el servidor. Solo se llama una vez por compra
+// (no en cada aprobación de entrada): el script del lado de Sheets es el que
+// decide en qué pestaña (Grupos/Individuales) y con qué número va, y agrega
+// las filas en blanco para los acompañantes cuando quantity > 1. Si no está
+// configurado o falla, no debe afectar la compra en curso: va en segundo
+// plano y solo se registra el error en consola.
+function syncToSheet(ticket) {
   if (!SHEETS_WEBHOOK_URL) return;
   fetch(SHEETS_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       secret: SHEETS_WEBHOOK_SECRET,
-      code,
-      listNumber: ticket.listNumber,
       cardholderName: ticket.cardholderName,
       document: ticket.document,
       quantity: ticket.quantity,
-      entriesApproved: ticket.entriesApproved,
-      usedAt: ticket.usedAt
+      transactionId: ticket.transactionId
     })
   }).catch((err) => console.error('Error sincronizando con Google Sheets:', err));
 }
@@ -358,7 +358,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
         document: data.document,
         quantity
       });
-      syncToSheet(ticketCode, issuedTickets[ticketCode]);
+      syncToSheet(issuedTickets[ticketCode]);
 
       const ticket = {
         transactionId: data.transactionId,
@@ -449,7 +449,6 @@ app.post('/api/tickets/approve', requireScanKey, (req, res) => {
   ticket.entriesApproved = (typeof ticket.entriesApproved === 'number' ? ticket.entriesApproved : 0) + count;
   ticket.usedAt = new Date().toISOString();
   saveIssuedTickets();
-  syncToSheet(code, ticket);
 
   res.json({
     approved: true,
