@@ -463,6 +463,30 @@ function requireScanKey(req, res, next) {
 
 // Paso 1: al escanear, solo consulta los datos del ticket (no lo marca como
 // usado todavía) para que el personal lo coteje contra la lista impresa.
+// Recupera manualmente un ticket real que se perdió del registro en vivo
+// (ej. por un redeploy antes de tener el volumen persistente). No usa
+// usedTransactions porque es solo para reponer el registro de validez, no
+// para volver a confirmar un cobro.
+app.post('/api/tickets/restore', requireScanKey, (req, res) => {
+  const { transactionId, cardholderName, document, quantity, email, phoneNumber } = req.body || {};
+  if (!transactionId || !quantity) {
+    return res.status(400).json({ error: 'Faltan transactionId o quantity.' });
+  }
+  const ticketCode = `RH-${transactionId}`;
+  if (issuedTickets[ticketCode]) {
+    return res.json({ restored: false, reason: 'ya existe', ticketCode });
+  }
+  const listNumber = registerIssuedTicket(ticketCode, {
+    transactionId: Number(transactionId),
+    cardholderName,
+    document,
+    quantity: Number(quantity),
+    email,
+    phoneNumber
+  });
+  res.json({ restored: true, ticketCode, listNumber });
+});
+
 app.post('/api/tickets/lookup', requireScanKey, (req, res) => {
   const code = (req.body && req.body.code || '').trim();
   const ticket = issuedTickets[code];
