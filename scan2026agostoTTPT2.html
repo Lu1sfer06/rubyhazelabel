@@ -344,6 +344,11 @@
         resultMain.textContent = data.remaining > 0
           ? `✓ Ingresaron ${data.approvedNow} — quedan ${data.remaining} de ${data.quantity} por ingresar`
           : '✓ Entrada aprobada';
+        if(data.quantity > 1){
+          resultQty.textContent = data.remaining > 0
+            ? `Grupo de ${data.quantity} personas · quedan ${data.remaining} por ingresar`
+            : `Grupo de ${data.quantity} personas · todos ingresaron`;
+        }
         resultActions.style.display = 'none';
         approveQtyWrap.style.display = 'none';
         setTimeout(resumeScanning, 1800);
