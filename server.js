@@ -198,12 +198,6 @@ const TICKET_WHATSAPP_NUMBERS = [
 ];
 const TICKET_CONTACT_EMAIL = 'maison@rubyhazelabel.com';
 
-function escapeXml(str) {
-  return String(str || '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
-  }[c]));
-}
-
 // Aproxima el ancho de cada carácter para partir un texto en líneas que
 // quepan en maxWidthPx — SVG no hace word-wrap solo, hay que calcularlo.
 function wrapTextLines(text, maxWidthPx, fontSizePx) {
@@ -228,17 +222,54 @@ function wrapTextLines(text, maxWidthPx, fontSizePx) {
 const TICKET_HEADER_IMAGE_B64 = fs.readFileSync(path.join(__dirname, 'eventos', 'ticket-header.png')).toString('base64');
 
 // El servidor (Railway) no tiene por qué tener ninguna fuente de letra
-// instalada en el sistema — sin esto, librsvg dibuja cada carácter como un
-// cuadro vacío. Se incrusta la fuente directamente en el SVG (como
-// data: URI) para no depender de nada externo al repo.
-const TICKET_FONT_REGULAR_B64 = fs.readFileSync(path.join(__dirname, 'assets', 'fonts', 'DejaVuSans.ttf')).toString('base64');
-const TICKET_FONT_BOLD_B64 = fs.readFileSync(path.join(__dirname, 'assets', 'fonts', 'DejaVuSans-Bold.ttf')).toString('base64');
-const TICKET_FONT_FACES = `
-  <style>
-    @font-face { font-family: 'TicketSans'; font-weight: 400; src: url(data:font/ttf;base64,${TICKET_FONT_REGULAR_B64}); }
-    @font-face { font-family: 'TicketSans'; font-weight: 700; src: url(data:font/ttf;base64,${TICKET_FONT_BOLD_B64}); }
-  </style>
-`;
+// instalada, y tampoco se puede confiar en que el librsvg que trae `sharp`
+// ahí soporte cargar fuentes (@font-face) — se probaron ambas cosas y
+// ninguna funcionó en producción aunque sí localmente. La forma que SÍ
+// funciona en cualquier entorno es convertir cada letra directamente en su
+// contorno vectorial con la fuente (vía opentype.js) y dibujar eso como
+// <path>: ya no es "texto" para el renderizador, es pura forma geométrica.
+const opentype = require('opentype.js');
+function loadFont(filename) {
+  const buf = fs.readFileSync(path.join(__dirname, 'assets', 'fonts', filename));
+  return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+}
+const TICKET_FONT_REGULAR = loadFont('DejaVuSans.ttf');
+const TICKET_FONT_BOLD = loadFont('DejaVuSans-Bold.ttf');
+
+// Se evita font.getPath(string) porque dispara el pipeline de sustitución
+// de glyphs (ligaduras/GSUB) y algunas fuentes traen tablas que opentype.js
+// no soporta del todo. Yendo letra por letra se evita ese pipeline.
+function measureText(font, text, fontSize) {
+  const scale = fontSize / font.unitsPerEm;
+  let width = 0;
+  for (const ch of text) width += (font.charToGlyph(ch).advanceWidth || 0) * scale;
+  return width;
+}
+function textPathD(font, text, x, y, fontSize) {
+  const scale = fontSize / font.unitsPerEm;
+  let cx = x;
+  const combined = new opentype.Path();
+  for (const ch of text) {
+    const glyph = font.charToGlyph(ch);
+    combined.extend(glyph.getPath(cx, y, fontSize));
+    cx += (glyph.advanceWidth || 0) * scale;
+  }
+  return { d: combined.toPathData(2), endX: cx };
+}
+// `runs`: [{ text, font, fontSize, fill }] — varios tramos (ej. regular +
+// bold + regular) centrados juntos como una sola línea.
+function centeredTextRuns(runs, centerX, y) {
+  const totalWidth = runs.reduce((sum, r) => sum + measureText(r.font, r.text, r.fontSize), 0);
+  let x = centerX - totalWidth / 2;
+  return runs.map((r) => {
+    const { d, endX } = textPathD(r.font, r.text, x, y, r.fontSize);
+    x = endX;
+    return `<path d="${d}" fill="${r.fill}"/>`;
+  }).join('');
+}
+function centeredText(text, centerX, y, fontSize, fill, bold) {
+  return centeredTextRuns([{ text, font: bold ? TICKET_FONT_BOLD : TICKET_FONT_REGULAR, fontSize, fill }], centerX, y);
+}
 
 // Compone el ticket completo (foto + texto + QR + pie) como una sola imagen
 // PNG, para que la persona pueda descargarlo de un solo toque en vez de
@@ -249,13 +280,14 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   const PAD = 36;
   const contentWidth = WIDTH - PAD * 2;
   const headerH = Math.round(WIDTH * 480 / 840);
+  const CX = WIDTH / 2;
 
   const qrSize = 300;
   const qrBuffer = await QRCode.toBuffer(ticketCode, { width: qrSize * 2, margin: 1 });
   const qrB64 = qrBuffer.toString('base64');
 
-  const name = escapeXml(cardholderName || '');
-  const groupLabel = escapeXml(isGuest ? 'Acceso de cortesía' : ticketGroupLabel(quantity)).toUpperCase();
+  const name = cardholderName || '';
+  const groupLabel = (isGuest ? 'Acceso de cortesía' : ticketGroupLabel(quantity)).toUpperCase();
   const introText = isGuest
     ? `Esta es tu entrada de cortesía para ${EVENT.name}, cortesía de Ruby Haze. Preséntala (impresa o en tu celular) en la entrada.`
     : (quantity > 1
@@ -269,21 +301,27 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   if (isGuest) {
     const bannerH = 92;
     parts.push(`<rect x="0" y="${y}" width="${WIDTH}" height="${bannerH}" fill="${TICKET_ACCENT}"/>`);
-    parts.push(`<text x="${WIDTH / 2}" y="${y + 34}" text-anchor="middle" font-family="TicketSans" font-size="12" font-weight="700" letter-spacing="2" fill="#0a0a0a">RUBY HAZE GUEST TICKET</text>`);
-    parts.push(`<text x="${WIDTH / 2}" y="${y + 68}" text-anchor="middle" font-family="TicketSans" font-size="30" font-weight="700" letter-spacing="1" fill="#0a0a0a">INVITADO / A</text>`);
+    parts.push(centeredText('RUBY HAZE GUEST TICKET', CX, y + 34, 12, '#0a0a0a', true));
+    parts.push(centeredText('INVITADO / A', CX, y + 68, 30, '#0a0a0a', true));
     y += bannerH;
   }
 
   y += 34;
-  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="17" fill="#111111">Hola${name ? ` <tspan font-weight="700">${name}</tspan>,` : ','}</text>`);
+  parts.push(name
+    ? centeredTextRuns([
+        { text: 'Hola ', font: TICKET_FONT_REGULAR, fontSize: 17, fill: '#111111' },
+        { text: name, font: TICKET_FONT_BOLD, fontSize: 17, fill: '#111111' },
+        { text: ',', font: TICKET_FONT_REGULAR, fontSize: 17, fill: '#111111' }
+      ], CX, y)
+    : centeredText('Hola,', CX, y, 17, '#111111', false));
   y += 28;
 
   for (const line of introLines) {
-    parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="14" fill="#555555">${escapeXml(line)}</text>`);
+    parts.push(centeredText(line, CX, y, 14, '#555555', false));
     y += 21;
   }
   y += 12;
-  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="11" letter-spacing="1" fill="#999999">RUBY HAZE TEAM</text>`);
+  parts.push(centeredText('RUBY HAZE TEAM', CX, y, 11, '#999999', false));
   y += 30;
 
   parts.push(`<line x1="${PAD}" y1="${y}" x2="${WIDTH - PAD}" y2="${y}" stroke="${isGuest ? TICKET_ACCENT : '#dddddd'}" stroke-width="2" stroke-dasharray="6,6"/>`);
@@ -298,24 +336,23 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   parts.push(`<image x="${qrX + qrBoxPad}" y="${y + qrBoxPad}" width="${qrSize}" height="${qrSize}" href="data:image/png;base64,${qrB64}"/>`);
   y += qrBoxSize + 16;
 
-  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="TicketSans" font-size="12" letter-spacing="1" fill="#bbbbbb">${escapeXml(ticketCode)}</text>`);
+  parts.push(centeredText(ticketCode, CX, y, 12, '#bbbbbb', false));
   y += 26;
 
   const pillW = Math.max(190, groupLabel.length * 9 + 60);
   parts.push(`<rect x="${(WIDTH - pillW) / 2}" y="${y}" width="${pillW}" height="36" rx="14" fill="#0a0a0a"/>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 24}" text-anchor="middle" font-family="TicketSans" font-size="13" font-weight="700" letter-spacing="1" fill="${TICKET_ACCENT}">${groupLabel}</text>`);
+  parts.push(centeredText(groupLabel, CX, y + 24, 13, TICKET_ACCENT, true));
   y += 36 + 34;
 
   const footerH = 96;
   parts.push(`<rect x="0" y="${y}" width="${WIDTH}" height="${footerH}" fill="#0a0a0a"/>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 30}" text-anchor="middle" font-family="TicketSans" font-size="12" fill="#cccccc">¿Tienes dudas? Escríbenos:</text>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 54}" text-anchor="middle" font-family="TicketSans" font-size="12" fill="${TICKET_ACCENT}">${escapeXml(TICKET_CONTACT_EMAIL)}</text>`);
-  parts.push(`<text x="${WIDTH / 2}" y="${y + 76}" text-anchor="middle" font-family="TicketSans" font-size="11" fill="${TICKET_ACCENT}">${TICKET_WHATSAPP_NUMBERS.map((w) => escapeXml(w.display)).join('   ·   ')}</text>`);
+  parts.push(centeredText('¿Tienes dudas? Escríbenos:', CX, y + 30, 12, '#cccccc', false));
+  parts.push(centeredText(TICKET_CONTACT_EMAIL, CX, y + 54, 12, TICKET_ACCENT, false));
+  parts.push(centeredText(TICKET_WHATSAPP_NUMBERS.map((w) => w.display).join('   ·   '), CX, y + 76, 11, TICKET_ACCENT, false));
   y += footerH;
 
   const totalH = Math.ceil(y);
   const svg = `<svg width="${WIDTH}" height="${totalH}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
-    ${TICKET_FONT_FACES}
     <rect x="0" y="0" width="${WIDTH}" height="${totalH}" fill="#ffffff"/>
     <image x="0" y="0" width="${WIDTH}" height="${headerH}" href="data:image/png;base64,${TICKET_HEADER_IMAGE_B64}"/>
     ${parts.join('\n')}
