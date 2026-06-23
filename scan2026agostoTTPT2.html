@@ -82,6 +82,16 @@
   .result-details{ margin-top:10px; }
   .result-details p{ margin:4px 0; font-size:0.95rem; color:#ffffff; font-weight:500; }
 
+  .approve-qty{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:14px; }
+  .approve-qty span{ font-size:0.85rem; color:rgba(255,255,255,0.7); }
+  .approve-qty-btn{
+    width:36px; height:36px; border-radius:10px; border:none;
+    background:rgba(255,255,255,0.12); color:#ffffff; font-size:1.1rem;
+    font-weight:800; cursor:pointer;
+  }
+  .approve-qty-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+  #approveQtyValue{ font-size:1.2rem; font-weight:800; color: var(--yellow); min-width:28px; display:inline-block; }
+
   .result-actions{ display:flex; gap:10px; margin-top:14px; }
   .approve-btn, .cancel-btn{
     flex:1;
@@ -126,6 +136,11 @@
         <p id="resultDoc"></p>
         <p id="resultQty"></p>
       </div>
+      <div class="approve-qty" id="approveQtyWrap" style="display:none;">
+        <button type="button" class="approve-qty-btn" id="approveQtyMinus" aria-label="Restar">&minus;</button>
+        <span>Ingresan ahora: <span id="approveQtyValue">1</span></span>
+        <button type="button" class="approve-qty-btn" id="approveQtyPlus" aria-label="Sumar">+</button>
+      </div>
       <div class="result-actions" id="resultActions" style="display:none;">
         <button type="button" class="approve-btn" id="approveBtn">Aprobar entrada</button>
         <button type="button" class="cancel-btn" id="cancelBtn">Cancelar</button>
@@ -155,12 +170,28 @@
   const cancelBtn = document.getElementById('cancelBtn');
   const resultCode = document.getElementById('resultCode');
   const statsEl = document.getElementById('stats');
+  const approveQtyWrap = document.getElementById('approveQtyWrap');
+  const approveQtyValueEl = document.getElementById('approveQtyValue');
+  const approveQtyMinus = document.getElementById('approveQtyMinus');
+  const approveQtyPlus = document.getElementById('approveQtyPlus');
 
   let scanKey = sessionStorage.getItem('rh_scan_key') || '';
   let scannedCount = 0;
   let busy = false;
   let scanner = null;
   let pendingCode = '';
+  let approveMax = 1;
+  let approveQty = 1;
+
+  function setApproveQty(n){
+    approveQty = Math.min(approveMax, Math.max(1, n));
+    approveQtyValueEl.textContent = approveQty;
+    approveQtyMinus.disabled = approveQty <= 1;
+    approveQtyPlus.disabled = approveQty >= approveMax;
+  }
+
+  approveQtyMinus.addEventListener('click', () => setApproveQty(approveQty - 1));
+  approveQtyPlus.addEventListener('click', () => setApproveQty(approveQty + 1));
 
   function startScanner(){
     gate.style.display = 'none';
@@ -180,6 +211,7 @@
     result.className = 'result fail';
     resultMain.textContent = '✗ ' + message;
     resultDetails.style.display = 'none';
+    approveQtyWrap.style.display = 'none';
     resultActions.style.display = 'none';
     result.style.display = 'block';
     setTimeout(resumeScanning, 1800);
@@ -220,17 +252,31 @@
       }
       if(data.used){
         const who = data.cardholderName ? ' — ' + data.cardholderName + ' (Lista #' + data.listNumber + ')' : '';
-        showFail('Ya fue aprobado antes' + who + (data.usedAt ? ' · ' + new Date(data.usedAt).toLocaleTimeString() : ''));
+        const progreso = data.quantity > 1 ? ` · ${data.entriesApproved}/${data.quantity} ingresaron` : '';
+        showFail('Ya fue usado por completo' + who + progreso + (data.usedAt ? ' · ' + new Date(data.usedAt).toLocaleTimeString() : ''));
         return;
       }
 
       result.className = 'result pending';
-      resultMain.textContent = 'Ticket encontrado — cotéjalo con la lista impresa';
+      resultMain.textContent = data.entriesApproved > 0
+        ? `Ticket parcial — ya ingresaron ${data.entriesApproved} de ${data.quantity}, cotéjalo con la lista`
+        : 'Ticket encontrado — cotéjalo con la lista impresa';
       resultListNum.textContent = data.listNumber;
       resultName.textContent = data.cardholderName || '(sin nombre)';
       resultDoc.textContent = data.document ? `Cédula: ${data.document}` : '';
-      resultQty.textContent = data.quantity > 1 ? `Grupo de ${data.quantity} personas` : '1 persona';
+      resultQty.textContent = data.quantity > 1 ? `Grupo de ${data.quantity} personas · quedan ${data.remaining} por ingresar` : '1 persona';
       resultDetails.style.display = 'block';
+
+      if(data.quantity > 1){
+        approveMax = data.remaining;
+        setApproveQty(data.remaining);
+        approveQtyWrap.style.display = 'flex';
+      } else {
+        approveMax = 1;
+        setApproveQty(1);
+        approveQtyWrap.style.display = 'none';
+      }
+
       resultActions.style.display = 'flex';
       result.style.display = 'block';
     } catch(err){
@@ -244,19 +290,22 @@
       const res = await fetch('/api/tickets/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-scan-key': scanKey },
-        body: JSON.stringify({ code: pendingCode })
+        body: JSON.stringify({ code: pendingCode, count: approveQty })
       });
       const data = await res.json();
 
       if(data.approved){
-        scannedCount++;
+        scannedCount += data.approvedNow;
         statsEl.textContent = scannedCount + ' entradas aprobadas';
         result.className = 'result ok';
-        resultMain.textContent = '✓ Entrada aprobada';
+        resultMain.textContent = data.remaining > 0
+          ? `✓ Ingresaron ${data.approvedNow} — quedan ${data.remaining} de ${data.quantity} por ingresar`
+          : '✓ Entrada aprobada';
         resultActions.style.display = 'none';
-        setTimeout(resumeScanning, 1400);
+        approveQtyWrap.style.display = 'none';
+        setTimeout(resumeScanning, 1800);
       } else {
-        showFail('Ya fue aprobado antes');
+        showFail('Ya fue usado por completo');
       }
     } catch(err){
       showFail('Error de conexión, intenta de nuevo');

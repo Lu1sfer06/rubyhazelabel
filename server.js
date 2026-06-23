@@ -108,11 +108,22 @@ function registerIssuedTicket(code, { transactionId, cardholderName, document, q
     cardholderName: cardholderName || '',
     document: document || '',
     quantity,
-    used: false,
+    entriesApproved: 0,
     usedAt: null
   };
   saveIssuedTickets();
   return listNumber;
+}
+
+// Tickets de grupo (quantity > 1) pueden entrar por partes: cada aprobación
+// suma `count` al contador en vez de matar el QR de una sola vez. Solo queda
+// muerto cuando entriesApproved llega a quantity. Soporta tickets-db.json
+// viejos que todavía tengan el campo booleano `used` de antes de este cambio.
+function ticketRemaining(ticket) {
+  const approved = typeof ticket.entriesApproved === 'number'
+    ? ticket.entriesApproved
+    : (ticket.used ? ticket.quantity : 0);
+  return Math.max(0, ticket.quantity - approved);
 }
 
 function ticketGroupLabel(quantity) {
@@ -137,8 +148,8 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
 
   const greetingName = cardholderName ? ` <strong>${cardholderName}</strong>` : '';
   const intro = quantity > 1
-    ? `Gracias por asegurar tu entrada para <strong>${EVENT.name}</strong> — este ticket es para tu grupo de ${quantity} personas (tú + ${quantity - 1} acompañante${quantity - 1 > 1 ? 's' : ''}). Estamos felices de que formes parte, ¡deben ingresar todos juntos! Nos vemos en la pista de baile.`
-    : `Gracias por asegurar tu entrada para <strong>${EVENT.name}</strong>. Estamos felices de que formes parte, ¡preséntalo (impreso o en tu celular) en la entrada! Nos vemos en la pista de baile.`;
+    ? `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong> — es para tu grupo de ${quantity} personas (tú + ${quantity - 1} acompañante${quantity - 1 > 1 ? 's' : ''}). Estamos felices de que formes parte, ¡deben ingresar todos juntos! Nos vemos en la pista de baile.`
+    : `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong>. Estamos felices de que formes parte, ¡preséntalo (impreso o en tu celular) en la entrada! Nos vemos en la pista de baile.`;
 
   // Meta de esquema de color forzado a "light": sin esto, varios clientes de
   // correo en celular (Gmail/Apple Mail en modo oscuro) invierten los fondos
@@ -199,7 +210,13 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
     from: `Ruby Haze <tickets@rubyhazemusic.com>`,
     replyTo: TICKET_CONTACT_EMAIL,
     to: email,
-    subject: quantity > 1 ? `Tu ticket (grupo de ${quantity}) — ${EVENT.name}` : `Tu ticket — ${EVENT.name}`,
+    // Asunto único por ticket (no solo por evento): si dos correos a la misma
+    // bandeja comparten asunto idéntico, Gmail los agrupa en una sola
+    // conversación y empieza a colapsar bajo "..." el texto que se repite
+    // igual en cada uno (la firma y el pie de contacto).
+    subject: quantity > 1
+      ? `Tu ticket (grupo de ${quantity}) — ${EVENT.name} · ${ticketCode}`
+      : `Tu ticket — ${EVENT.name} · ${ticketCode}`,
     html
   });
   if (error) throw new Error(typeof error === 'string' ? error : JSON.stringify(error));
@@ -364,6 +381,11 @@ app.post('/api/tickets/lookup', requireScanKey, (req, res) => {
     return res.json({ found: false });
   }
 
+  const entriesApproved = typeof ticket.entriesApproved === 'number'
+    ? ticket.entriesApproved
+    : (ticket.used ? ticket.quantity : 0);
+  const remaining = ticketRemaining(ticket);
+
   res.json({
     found: true,
     code,
@@ -371,13 +393,17 @@ app.post('/api/tickets/lookup', requireScanKey, (req, res) => {
     cardholderName: ticket.cardholderName,
     document: ticket.document,
     quantity: ticket.quantity,
-    used: ticket.used,
+    entriesApproved,
+    remaining,
+    used: remaining <= 0,
     usedAt: ticket.usedAt
   });
 });
 
 // Paso 2: el personal confirma manualmente contra la lista impresa y aprueba
-// la entrada — a partir de aquí ese código ya no es válido.
+// el ingreso. Tickets de grupo (quantity > 1) admiten ingresos parciales: se
+// puede aprobar de a `count` personas por escaneo, y el QR solo queda muerto
+// cuando ya entraron todas las que cubría el ticket.
 app.post('/api/tickets/approve', requireScanKey, (req, res) => {
   const code = (req.body && req.body.code || '').trim();
   const ticket = issuedTickets[code];
@@ -385,15 +411,29 @@ app.post('/api/tickets/approve', requireScanKey, (req, res) => {
   if (!ticket) {
     return res.json({ approved: false, reason: 'not_found' });
   }
-  if (ticket.used) {
+
+  const remaining = ticketRemaining(ticket);
+  if (remaining <= 0) {
     return res.json({ approved: false, reason: 'already_used', usedAt: ticket.usedAt });
   }
 
-  ticket.used = true;
+  const requested = parseInt(req.body && req.body.count, 10);
+  const count = Math.min(remaining, Math.max(1, Number.isFinite(requested) ? requested : remaining));
+
+  ticket.entriesApproved = (typeof ticket.entriesApproved === 'number' ? ticket.entriesApproved : 0) + count;
   ticket.usedAt = new Date().toISOString();
   saveIssuedTickets();
 
-  res.json({ approved: true, code, cardholderName: ticket.cardholderName, listNumber: ticket.listNumber });
+  res.json({
+    approved: true,
+    code,
+    cardholderName: ticket.cardholderName,
+    listNumber: ticket.listNumber,
+    quantity: ticket.quantity,
+    approvedNow: count,
+    entriesApproved: ticket.entriesApproved,
+    remaining: ticketRemaining(ticket)
+  });
 });
 
 // Imagen del QR usada dentro del correo del ticket (ver sendTicketEmail). El
