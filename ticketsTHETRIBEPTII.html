@@ -165,21 +165,6 @@
   }
   #pp-button{ display:flex; justify-content:center; }
 
-  .promo-banner{
-    display:inline-block;
-    text-align:center;
-    line-height:1.4;
-    background: linear-gradient(135deg, #c41230, #7a0c1d);
-    color:#ffffff;
-    font-weight:800;
-    font-size:0.78rem;
-    letter-spacing:0.04em;
-    text-transform:uppercase;
-    padding:8px 16px;
-    border-radius:16px;
-    margin-bottom:14px;
-    box-shadow:0 4px 16px rgba(162,3,26,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
-  }
 
   .name-field{ text-align:center; margin-bottom: 22px; }
   .name-field label{
@@ -327,7 +312,6 @@
       </div>
 
       <div class="qty-selector">
-        <div class="promo-banner">Promo: $11.68 c/u<br>comprando en grupo de 5 tickets</div>
         <span class="qty-label">Cantidad de tickets</span>
         <div class="qty-control">
           <button type="button" class="qty-btn" id="qtyMinus" aria-label="Restar ticket">&minus;</button>
@@ -392,8 +376,6 @@
   })();
 
   const MAX_QTY = 5;
-  const PROMO_QTY = 5;
-  const PROMO_PRICE_USD = 11.68; // grupo de 5: cada entrada deja $11 netos tras la comisión de Payphone
   // TEMPORAL: precio de prueba con Payphone en modo real, solo para 1 entrada
   // individual. Quitar y volver a usar CONFIG.priceUSD una vez hecha la prueba.
   const TEST_SINGLE_PRICE_USD = 1.00;
@@ -410,7 +392,6 @@
   let nameTouched = false;
 
   function pricePerTicket(qty){
-    if(qty === PROMO_QTY) return PROMO_PRICE_USD;
     if(qty === 1) return TEST_SINGLE_PRICE_USD;
     return CONFIG.priceUSD;
   }

@@ -103,6 +103,20 @@
   .result.pending{ background: rgba(219, 206, 68, 0.15); border:2px solid var(--yellow); color: var(--yellow); }
   .result .code{ display:block; font-size:0.75rem; font-weight:500; color:#ffffff; margin-top:8px; }
 
+  .guest-badge{
+    display:block;
+    background: linear-gradient(135deg, #f0e58a, var(--yellow) 45%, #b8972a);
+    color:#0a0a0a;
+    font-weight:900;
+    font-size:0.75rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    text-align:center;
+    border-radius:10px;
+    padding:6px 10px;
+    margin-bottom:8px;
+  }
+
   .result-details{ margin-top:8px; }
   .result-details p{ margin:3px 0; font-size:0.88rem; color:#ffffff; font-weight:500; }
 
@@ -156,9 +170,10 @@
   <div id="scannerWrap" style="display:none;">
     <div id="reader"></div>
     <div class="result" id="result">
+      <span class="guest-badge" id="guestBadge" style="display:none;">Invitado/a — revisar lista de invitados</span>
       <span id="resultMain"></span>
       <div class="result-details" id="resultDetails" style="display:none;">
-        <p>Lista #<strong id="resultListNum"></strong> — <strong id="resultName"></strong></p>
+        <p><span id="resultListLabel">Lista #</span><strong id="resultListNum"></strong> — <strong id="resultName"></strong></p>
         <p id="resultDoc"></p>
         <p id="resultQty"></p>
       </div>
@@ -189,10 +204,12 @@
   const resultMain = document.getElementById('resultMain');
   const resultDetails = document.getElementById('resultDetails');
   const resultListNum = document.getElementById('resultListNum');
+  const resultListLabel = document.getElementById('resultListLabel');
   const resultName = document.getElementById('resultName');
   const resultDoc = document.getElementById('resultDoc');
   const resultQty = document.getElementById('resultQty');
   const resultActions = document.getElementById('resultActions');
+  const guestBadge = document.getElementById('guestBadge');
   const approveBtn = document.getElementById('approveBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const resultCode = document.getElementById('resultCode');
@@ -258,6 +275,7 @@
 
   function showFail(message){
     result.className = 'result fail';
+    guestBadge.style.display = 'none';
     resultMain.textContent = '✗ ' + message;
     resultDetails.style.display = 'none';
     approveQtyWrap.style.display = 'none';
@@ -309,10 +327,21 @@
       }
 
       result.className = 'result pending';
+      guestBadge.style.display = data.isGuest ? 'block' : 'none';
+      const listLabel = data.isGuest ? 'la lista de invitados' : 'la lista impresa';
       resultMain.textContent = data.entriesApproved > 0
-        ? `Ticket parcial — ya ingresaron ${data.entriesApproved} de ${data.quantity}, cotéjalo con la lista`
-        : 'Ticket encontrado — cotéjalo con la lista impresa';
-      resultListNum.textContent = data.listNumber;
+        ? `Ticket parcial — ya ingresaron ${data.entriesApproved} de ${data.quantity}, cotéjalo con ${listLabel}`
+        : `Ticket encontrado — cotéjalo con ${listLabel}`;
+      if(data.isGuest && data.guestListNumber){
+        resultListLabel.textContent = 'Invitado #';
+        resultListNum.textContent = data.guestListNumber;
+      } else if(data.isGuest){
+        resultListLabel.textContent = '';
+        resultListNum.textContent = '(sin número, buscar por nombre)';
+      } else {
+        resultListLabel.textContent = 'Lista #';
+        resultListNum.textContent = data.listNumber;
+      }
       resultName.textContent = data.cardholderName || '(sin nombre)';
       resultDoc.textContent = data.document ? `Cédula: ${data.document}` : '';
       resultQty.textContent = data.quantity > 1 ? `Grupo de ${data.quantity} personas · quedan ${data.remaining} por ingresar` : '1 persona';

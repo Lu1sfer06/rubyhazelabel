@@ -5,6 +5,7 @@ const fs = require('fs');
 const https = require('https');
 const { Resend } = require('resend');
 const QRCode = require('qrcode');
+const sharp = require('sharp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,20 +23,17 @@ const EVENT = {
   place: 'Kuno Seafood Rooftop, Portoviejo'
 };
 
-// Debe coincidir exactamente con CONFIG/MAX_QTY/PROMO_* en
-// ticketsTHETRIBEPTII.html — se usa para deducir la cantidad de tickets a
-// partir del monto realmente cobrado, ya que los optionalParameter que le
-// pasamos a la Cajita de Payphone no siempre llegan de vuelta en el Confirm.
+// Debe coincidir exactamente con CONFIG/MAX_QTY en ticketsTHETRIBEPTII.html
+// — se usa para deducir la cantidad de tickets a partir del monto realmente
+// cobrado, ya que los optionalParameter que le pasamos a la Cajita de
+// Payphone no siempre llegan de vuelta en el Confirm.
 const MAX_QTY = 5;
-const PROMO_QTY = 5;
 const PRICE_USD = 15.92;
 // TEMPORAL: precio de prueba con Payphone en modo real, solo para 1 entrada
 // individual. Quitar y volver a usar PRICE_USD una vez hecha la prueba.
 const TEST_SINGLE_PRICE_USD = 1.00;
-const PROMO_PRICE_USD = 11.68;
 
 function pricePerTicket(qty) {
-  if (qty === PROMO_QTY) return PROMO_PRICE_USD;
   if (qty === 1) return TEST_SINGLE_PRICE_USD;
   return PRICE_USD;
 }
@@ -200,19 +198,149 @@ const TICKET_WHATSAPP_NUMBERS = [
 ];
 const TICKET_CONTACT_EMAIL = 'maison@rubyhazelabel.com';
 
+function escapeXml(str) {
+  return String(str || '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+  }[c]));
+}
+
+// Aproxima el ancho de cada carácter para partir un texto en líneas que
+// quepan en maxWidthPx — SVG no hace word-wrap solo, hay que calcularlo.
+function wrapTextLines(text, maxWidthPx, fontSizePx) {
+  const avgCharWidth = fontSizePx * 0.52;
+  const maxChars = Math.max(10, Math.floor(maxWidthPx / avgCharWidth));
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+const TICKET_HEADER_IMAGE_B64 = fs.readFileSync(path.join(__dirname, 'eventos', 'ticket-header.png')).toString('base64');
+
+// Compone el ticket completo (foto + texto + QR + pie) como una sola imagen
+// PNG, para que la persona pueda descargarlo de un solo toque en vez de
+// guardar fragmentos sueltos (la foto de fondo o el QR por separado).
+async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
+  const isGuest = ticketCode.startsWith('RH-MANUAL');
+  const WIDTH = 640;
+  const PAD = 36;
+  const contentWidth = WIDTH - PAD * 2;
+  const headerH = Math.round(WIDTH * 480 / 840);
+
+  const qrSize = 300;
+  const qrBuffer = await QRCode.toBuffer(ticketCode, { width: qrSize * 2, margin: 1 });
+  const qrB64 = qrBuffer.toString('base64');
+
+  const name = escapeXml(cardholderName || '');
+  const groupLabel = escapeXml(isGuest ? 'Acceso de cortesía' : ticketGroupLabel(quantity)).toUpperCase();
+  const introText = isGuest
+    ? `Esta es tu entrada de cortesía para ${EVENT.name}, cortesía de Ruby Haze. Preséntala (impresa o en tu celular) en la entrada.`
+    : (quantity > 1
+        ? `Tu ticket para ${EVENT.name} es válido para ${quantity} personas. Cotéjalo con la lista en la puerta.`
+        : `Tu ticket para ${EVENT.name}. Preséntalo (impreso o en tu celular) en la entrada.`);
+  const introLines = wrapTextLines(introText, contentWidth, 15);
+
+  const parts = [];
+  let y = headerH;
+
+  if (isGuest) {
+    const bannerH = 92;
+    parts.push(`<rect x="0" y="${y}" width="${WIDTH}" height="${bannerH}" fill="${TICKET_ACCENT}"/>`);
+    parts.push(`<text x="${WIDTH / 2}" y="${y + 34}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2" fill="#0a0a0a">RUBY HAZE GUEST TICKET</text>`);
+    parts.push(`<text x="${WIDTH / 2}" y="${y + 68}" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="900" letter-spacing="1" fill="#0a0a0a">INVITADO / A</text>`);
+    y += bannerH;
+  }
+
+  y += 34;
+  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#111111">Hola${name ? ` <tspan font-weight="700">${name}</tspan>,` : ','}</text>`);
+  y += 28;
+
+  for (const line of introLines) {
+    parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#555555">${escapeXml(line)}</text>`);
+    y += 21;
+  }
+  y += 12;
+  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" letter-spacing="1" fill="#999999">RUBY HAZE TEAM</text>`);
+  y += 30;
+
+  parts.push(`<line x1="${PAD}" y1="${y}" x2="${WIDTH - PAD}" y2="${y}" stroke="${isGuest ? TICKET_ACCENT : '#dddddd'}" stroke-width="2" stroke-dasharray="6,6"/>`);
+  y += 36;
+
+  const qrBoxPad = isGuest ? 14 : 0;
+  const qrBoxSize = qrSize + qrBoxPad * 2;
+  const qrX = (WIDTH - qrBoxSize) / 2;
+  if (isGuest) {
+    parts.push(`<rect x="${qrX}" y="${y}" width="${qrBoxSize}" height="${qrBoxSize}" rx="18" fill="none" stroke="${TICKET_ACCENT}" stroke-width="3"/>`);
+  }
+  parts.push(`<image x="${qrX + qrBoxPad}" y="${y + qrBoxPad}" width="${qrSize}" height="${qrSize}" href="data:image/png;base64,${qrB64}"/>`);
+  y += qrBoxSize + 16;
+
+  parts.push(`<text x="${WIDTH / 2}" y="${y}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" letter-spacing="1" fill="#bbbbbb">${escapeXml(ticketCode)}</text>`);
+  y += 26;
+
+  const pillW = Math.max(190, groupLabel.length * 9 + 60);
+  parts.push(`<rect x="${(WIDTH - pillW) / 2}" y="${y}" width="${pillW}" height="36" rx="14" fill="#0a0a0a"/>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 24}" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1" fill="${TICKET_ACCENT}">${groupLabel}</text>`);
+  y += 36 + 34;
+
+  const footerH = 96;
+  parts.push(`<rect x="0" y="${y}" width="${WIDTH}" height="${footerH}" fill="#0a0a0a"/>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 30}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#cccccc">¿Tienes dudas? Escríbenos:</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 54}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="${TICKET_ACCENT}">${escapeXml(TICKET_CONTACT_EMAIL)}</text>`);
+  parts.push(`<text x="${WIDTH / 2}" y="${y + 76}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="${TICKET_ACCENT}">${TICKET_WHATSAPP_NUMBERS.map((w) => escapeXml(w.display)).join('   ·   ')}</text>`);
+  y += footerH;
+
+  const totalH = Math.ceil(y);
+  const svg = `<svg width="${WIDTH}" height="${totalH}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="${WIDTH}" height="${totalH}" fill="#ffffff"/>
+    <image x="0" y="0" width="${WIDTH}" height="${headerH}" href="data:image/png;base64,${TICKET_HEADER_IMAGE_B64}"/>
+    ${parts.join('\n')}
+    <rect x="1" y="1" width="${WIDTH - 2}" height="${totalH - 2}" rx="18" fill="none" stroke="${isGuest ? TICKET_ACCENT : '#eeeeee'}" stroke-width="${isGuest ? 3 : 1}"/>
+  </svg>`;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
 async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) {
   // Se sirve como imagen normal desde /api/tickets/qr en vez de adjunto con
   // cid: así carga igual de bien que los logos/foto de fondo en cualquier
   // cliente de correo, sin depender de si el proveedor soporta imágenes
   // incrustadas en el envío.
   const qrUrl = `https://rubyhazemusic.com/api/tickets/qr/${encodeURIComponent(ticketCode)}`;
-  const groupLabel = ticketGroupLabel(quantity);
+  // Los tickets creados con /api/tickets/create-manual (cortesía, sin pago
+  // real) usan el prefijo RH-MANUAL — con eso basta para darle el diseño
+  // dorado especial sin necesitar un parámetro aparte en cada llamada.
+  const isGuest = ticketCode.startsWith('RH-MANUAL');
+  const groupLabel = isGuest ? 'Acceso de cortesía' : ticketGroupLabel(quantity);
   const waText = encodeURIComponent(`Hola, tengo una consulta sobre mi ticket/QR ya adquirido para ${EVENT.name}.`);
 
   const greetingName = cardholderName ? ` <strong>${cardholderName}</strong>` : '';
-  const intro = quantity > 1
-    ? `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong> — es válido para ${quantity} personas, cotéjalo con la lista en la puerta. Estamos felices de que formen parte. Nos vemos en la pista de baile.`
-    : `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong>. Estamos felices de que formes parte, ¡preséntalo (impreso o en tu celular) en la entrada! Nos vemos en la pista de baile.`;
+  const intro = isGuest
+    ? `Esta es tu entrada de cortesía para <strong>${EVENT.name}</strong>, cortesía de Ruby Haze. ¡Preséntala (impresa o en tu celular) en la entrada! Nos vemos en la pista de baile.`
+    : quantity > 1
+      ? `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong> — es válido para ${quantity} personas, cotéjalo con la lista en la puerta. Estamos felices de que formen parte. Nos vemos en la pista de baile.`
+      : `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong>. Estamos felices de que formes parte, ¡preséntalo (impreso o en tu celular) en la entrada! Nos vemos en la pista de baile.`;
+
+  const guestBanner = isGuest ? `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td bgcolor="${TICKET_ACCENT}" style="background:linear-gradient(135deg, #f0e58a, ${TICKET_ACCENT} 45%, #b8972a); padding:14px 24px; text-align:center;">
+            <p style="margin:0; color:#0a0a0a; font-size:10px; letter-spacing:0.18em; font-weight:700; text-transform:uppercase; font-family:Arial, sans-serif;">Ruby Haze Guest Ticket</p>
+            <p style="margin:2px 0 0; color:#0a0a0a; font-size:24px; letter-spacing:0.04em; font-weight:900; text-transform:uppercase; font-family:Arial, sans-serif;">Invitado / A</p>
+          </td>
+        </tr>
+      </table>
+  ` : '';
 
   // Meta de esquema de color forzado a "light": sin esto, varios clientes de
   // correo en celular (Gmail/Apple Mail en modo oscuro) invierten los fondos
@@ -226,9 +354,10 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
       <meta name="supported-color-schemes" content="light">
     </head>
     <body style="margin:0; padding:0; background:#f4f4f4;">
-    <div style="font-family: Arial, sans-serif; max-width: 420px; margin: 0 auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #eee;">
+    <div style="font-family: Arial, sans-serif; max-width: 420px; margin: 0 auto; background:#ffffff; border-radius:18px; overflow:hidden; border:${isGuest ? `2px solid ${TICKET_ACCENT}` : '1px solid #eee'};">
 
       <img src="https://rubyhazemusic.com/eventos/ticket-header.png" alt="${EVENT.name}" width="420" style="display:block; width:100%; max-width:420px; height:auto;">
+      ${guestBanner}
 
       <div style="padding:26px 24px 4px;">
         <p style="margin:0 0 4px; color:#111111; font-size:14px; text-align:center;">Hola${greetingName},</p>
@@ -236,7 +365,7 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
         <p style="margin:14px 0 0; color:#999999; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; text-align:center;">Ruby Haze Team</p>
       </div>
 
-      <div style="border-top:2px dashed #dddddd; margin:22px 24px 0;"></div>
+      <div style="border-top:2px dashed ${isGuest ? TICKET_ACCENT : '#dddddd'}; margin:22px 24px 0;"></div>
 
       <div style="padding:22px 24px; text-align:center;">
         <img src="${qrUrl}" alt="Código QR del ticket" width="220" height="220">
@@ -245,6 +374,13 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
           <tr>
             <td bgcolor="#0a0a0a" style="background-color:#0a0a0a; border-radius:14px; padding:6px 14px;">
               <span style="color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; font-family:Arial, sans-serif;">${groupLabel}</span>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:18px auto 0;">
+          <tr>
+            <td bgcolor="${TICKET_ACCENT}" style="background-color:${TICKET_ACCENT}; border-radius:10px;">
+              <a href="https://rubyhazemusic.com/api/tickets/image/${encodeURIComponent(ticketCode)}" style="display:block; padding:11px 22px; color:#0a0a0a; font-weight:800; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; text-decoration:none; font-family:Arial, sans-serif;">Descargar tu ticket</a>
             </td>
           </tr>
         </table>
@@ -277,9 +413,11 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
     // bandeja comparten asunto idéntico, Gmail los agrupa en una sola
     // conversación y empieza a colapsar bajo "..." el texto que se repite
     // igual en cada uno (la firma y el pie de contacto).
-    subject: quantity > 1
-      ? `Tu ticket (grupo de ${quantity}) — ${EVENT.name} · ${ticketCode}`
-      : `Tu ticket — ${EVENT.name} · ${ticketCode}`,
+    subject: isGuest
+      ? `Tu entrada de invitado — ${EVENT.name} · ${ticketCode}`
+      : quantity > 1
+        ? `Tu ticket (grupo de ${quantity}) — ${EVENT.name} · ${ticketCode}`
+        : `Tu ticket — ${EVENT.name} · ${ticketCode}`,
     html
   });
   if (error) throw new Error(typeof error === 'string' ? error : JSON.stringify(error));
@@ -463,6 +601,22 @@ function requireScanKey(req, res, next) {
 
 // Paso 1: al escanear, solo consulta los datos del ticket (no lo marca como
 // usado todavía) para que el personal lo coteje contra la lista impresa.
+// Borra todo el registro de tickets emitidos (uso manual: limpiar datos de
+// prueba antes de la venta real). Como ahora vive en un volumen persistente,
+// ya no se borra solo con un redeploy, así que esta ruta es la forma de
+// reiniciarlo cuando se pida explícitamente. No toca el Sheet ni el
+// contador del escáner (localStorage) — esos se limpian por separado.
+app.post('/api/tickets/wipe', requireScanKey, (req, res) => {
+  const removed = Object.keys(issuedTickets).length;
+  for (const code of Object.keys(issuedTickets)) {
+    delete issuedTickets[code];
+  }
+  usedTransactions.clear();
+  pendingPurchases.clear();
+  saveIssuedTickets();
+  res.json({ wiped: true, removed });
+});
+
 // Recupera manualmente un ticket real que se perdió del registro en vivo
 // (ej. por un redeploy antes de tener el volumen persistente). No usa
 // usedTransactions porque es solo para reponer el registro de validez, no
@@ -487,11 +641,115 @@ app.post('/api/tickets/restore', requireScanKey, (req, res) => {
   res.json({ restored: true, ticketCode, listNumber });
 });
 
+// Contrario de /restore: desactiva un ticket puntual (ej. compra revertida,
+// reembolso, duplicado, ticket de prueba) sin afectar a los demás. Se le
+// puede pasar `code` (ej. "RH-87718296") o directamente `transactionId`.
+app.post('/api/tickets/deactivate', requireScanKey, (req, res) => {
+  const { code, transactionId } = req.body || {};
+  const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
+  if (!ticketCode) {
+    return res.status(400).json({ error: 'Falta code o transactionId.' });
+  }
+  if (!issuedTickets[ticketCode]) {
+    return res.json({ deactivated: false, reason: 'no existe', ticketCode });
+  }
+  // No se borra: solo se marca como desactivado, para poder reactivarlo
+  // después con /api/tickets/activate pasando únicamente el código.
+  issuedTickets[ticketCode].disabled = true;
+  saveIssuedTickets();
+  res.json({ deactivated: true, ticketCode });
+});
+
+// Simétrico a /deactivate: con solo el código vuelve a dejar válido un
+// ticket que se había desactivado (no recupera uno borrado del todo — para
+// eso está /restore).
+app.post('/api/tickets/activate', requireScanKey, (req, res) => {
+  const { code, transactionId } = req.body || {};
+  const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
+  if (!ticketCode) {
+    return res.status(400).json({ error: 'Falta code o transactionId.' });
+  }
+  if (!issuedTickets[ticketCode]) {
+    return res.json({ activated: false, reason: 'no existe', ticketCode });
+  }
+  delete issuedTickets[ticketCode].disabled;
+  saveIssuedTickets();
+  res.json({ activated: true, ticketCode });
+});
+
+// Ticket de cortesía/invitado, sin pago real de por medio: genera su propio
+// código (prefijo MANUAL en vez de un Transaction ID de Payphone) y lo deja
+// igual de válido para el escáner. Si se da un correo, se le envía el ticket
+// con su QR igual que a una compra normal.
+app.post('/api/tickets/create-manual', requireScanKey, async (req, res) => {
+  const { cardholderName, document, quantity, email, phoneNumber, guestListNumber } = req.body || {};
+  if (!cardholderName) {
+    return res.status(400).json({ error: 'Falta cardholderName.' });
+  }
+  const qty = Math.max(1, parseInt(quantity, 10) || 1);
+  const ticketCode = `RH-MANUAL${Date.now()}`;
+  const listNumber = registerIssuedTicket(ticketCode, {
+    transactionId: `MANUAL-${Date.now()}`,
+    cardholderName,
+    document: document || '',
+    quantity: qty,
+    email: email || '',
+    phoneNumber: phoneNumber || ''
+  });
+  // El número interno (listNumber) cuenta TODOS los tickets del servidor,
+  // no tiene relación con la posición en la lista de invitados manual del
+  // usuario. Si se da guestListNumber, el escáner muestra ese en su lugar.
+  if (guestListNumber) {
+    issuedTickets[ticketCode].guestListNumber = guestListNumber;
+    saveIssuedTickets();
+  }
+  // A propósito NO se sincroniza al Sheet ("Individuales"/"Grupos"): esas
+  // pestañas son solo para ventas reales, no para cortesías/invitados. El
+  // control de invitados vive aparte, en la pestaña "Lista de invitados"
+  // que se maneja a mano.
+
+  if (email) {
+    sendTicketEmail({ email, cardholderName, quantity: qty, ticketCode })
+      .catch((err) => console.error('Error enviando ticket manual:', err));
+  }
+
+  res.json({
+    created: true,
+    ticketCode,
+    listNumber,
+    qrUrl: `https://rubyhazemusic.com/api/tickets/qr/${encodeURIComponent(ticketCode)}`
+  });
+});
+
+// Para invitados que se crean sin correo todavía (solo nombre, ya válidos
+// para escanear) y luego sí lo mandan: envía el ticket YA EXISTENTE a ese
+// correo, en vez de crear uno nuevo con otro código/QR.
+app.post('/api/tickets/send-email', requireScanKey, async (req, res) => {
+  const { code, email } = req.body || {};
+  const ticketCode = (code || '').trim();
+  if (!ticketCode || !email) {
+    return res.status(400).json({ error: 'Falta code o email.' });
+  }
+  const ticket = issuedTickets[ticketCode];
+  if (!ticket) {
+    return res.status(404).json({ error: 'Ticket no encontrado.' });
+  }
+  ticket.email = email;
+  saveIssuedTickets();
+  try {
+    await sendTicketEmail({ email, cardholderName: ticket.cardholderName, quantity: ticket.quantity, ticketCode });
+    res.json({ sent: true });
+  } catch (err) {
+    console.error('Error enviando ticket existente:', err);
+    res.status(500).json({ error: 'No se pudo enviar el correo.' });
+  }
+});
+
 app.post('/api/tickets/lookup', requireScanKey, (req, res) => {
   const code = (req.body && req.body.code || '').trim();
   const ticket = issuedTickets[code];
 
-  if (!ticket) {
+  if (!ticket || ticket.disabled) {
     return res.json({ found: false });
   }
 
@@ -503,7 +761,9 @@ app.post('/api/tickets/lookup', requireScanKey, (req, res) => {
   res.json({
     found: true,
     code,
+    isGuest: code.startsWith('RH-MANUAL'),
     listNumber: ticket.listNumber,
+    guestListNumber: ticket.guestListNumber || null,
     cardholderName: ticket.cardholderName,
     document: ticket.document,
     quantity: ticket.quantity,
@@ -522,7 +782,7 @@ app.post('/api/tickets/approve', requireScanKey, (req, res) => {
   const code = (req.body && req.body.code || '').trim();
   const ticket = issuedTickets[code];
 
-  if (!ticket) {
+  if (!ticket || ticket.disabled) {
     return res.json({ approved: false, reason: 'not_found' });
   }
 
@@ -560,6 +820,29 @@ app.get('/api/tickets/qr/:code', async (req, res) => {
     res.send(buffer);
   } catch (err) {
     res.status(400).end();
+  }
+});
+
+// Ticket completo (foto + texto + QR + pie) como una sola imagen para
+// descargar de un solo toque desde el botón del correo.
+app.get('/api/tickets/image/:code', async (req, res) => {
+  const code = req.params.code;
+  const ticket = issuedTickets[code];
+  if (!ticket) {
+    return res.status(404).send('Ticket no encontrado.');
+  }
+  try {
+    const buffer = await composeTicketImage({
+      ticketCode: code,
+      cardholderName: ticket.cardholderName,
+      quantity: ticket.quantity
+    });
+    res.set('Content-Type', 'image/png');
+    res.set('Content-Disposition', `attachment; filename="ticket-ruby-haze-${code}.png"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Error generando imagen del ticket:', err);
+    res.status(500).send('Error generando la imagen.');
   }
 });
 
