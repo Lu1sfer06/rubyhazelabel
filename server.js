@@ -148,7 +148,7 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
 
   const greetingName = cardholderName ? ` <strong>${cardholderName}</strong>` : '';
   const intro = quantity > 1
-    ? `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong> — es para tu grupo de ${quantity} personas (tú + ${quantity - 1} acompañante${quantity - 1 > 1 ? 's' : ''}). Estamos felices de que formes parte, ¡deben ingresar todos juntos! Nos vemos en la pista de baile.`
+    ? `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong> — es válido para ${quantity} personas, cotéjalo con la lista en la puerta. Estamos felices de que formen parte. Nos vemos en la pista de baile.`
     : `Gracias por asegurar tu ticket para <strong>${EVENT.name}</strong>. Estamos felices de que formes parte, ¡preséntalo (impreso o en tu celular) en la entrada! Nos vemos en la pista de baile.`;
 
   // Meta de esquema de color forzado a "light": sin esto, varios clientes de
