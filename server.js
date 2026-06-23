@@ -3,15 +3,14 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const QRCode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
-const GMAIL_USER = (process.env.GMAIL_USER || '').trim();
-const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || '').trim();
+const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
 const SCAN_PASSWORD = (process.env.SCAN_PASSWORD || '').trim();
 
 // EDITAR: datos del evento mostrados en el correo del ticket.
@@ -21,13 +20,7 @@ const EVENT = {
   place: 'Kuno Seafood Rooftop, Portoviejo'
 };
 
-const mailer = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000
-});
+const resend = new Resend(RESEND_API_KEY);
 
 // Protege contra llamadas externas (correo, webhook) que se queden colgadas:
 // nunca deben poder bloquear la respuesta al comprador más de `ms`.
@@ -95,7 +88,11 @@ const TICKET_WHATSAPP_NUMBERS = [
 const TICKET_CONTACT_EMAIL = 'maison@rubyhazelabel.com';
 
 async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) {
-  const qrBuffer = await QRCode.toBuffer(ticketCode, { width: 320, margin: 2 });
+  // Se sirve como imagen normal desde /api/tickets/qr en vez de adjunto con
+  // cid: así carga igual de bien que los logos/foto de fondo en cualquier
+  // cliente de correo, sin depender de si el proveedor soporta imágenes
+  // incrustadas en el envío.
+  const qrUrl = `https://rubyhazemusic.com/api/tickets/qr/${encodeURIComponent(ticketCode)}`;
   const groupLabel = ticketGroupLabel(quantity);
   const waText = encodeURIComponent(`Hola, tengo una consulta sobre mi ticket/QR ya adquirido para ${EVENT.name}.`);
 
@@ -120,7 +117,7 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
       <div style="border-top:2px dashed #dddddd; margin:22px 24px 0;"></div>
 
       <div style="padding:22px 24px; text-align:center;">
-        <img src="cid:qrcode" alt="Código QR del ticket" width="220" height="220">
+        <img src="${qrUrl}" alt="Código QR del ticket" width="220" height="220">
         <p style="color:#bbbbbb; font-size:11px; letter-spacing:0.04em; margin:10px 0 4px;">${ticketCode}</p>
         <p style="display:inline-block; background:#0a0a0a; color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; padding:6px 14px; border-radius:14px; margin-top:4px;">${groupLabel}</p>
       </div>
@@ -138,17 +135,14 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
     </div>
   `;
 
-  await mailer.sendMail({
-    from: `"Ruby Haze" <${GMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: `Ruby Haze <tickets@rubyhazemusic.com>`,
+    replyTo: TICKET_CONTACT_EMAIL,
     to: email,
     subject: quantity > 1 ? `Tu ticket (grupo de ${quantity}) — ${EVENT.name}` : `Tu ticket — ${EVENT.name}`,
-    html,
-    attachments: [{
-      filename: 'ticket-qr.png',
-      content: qrBuffer,
-      cid: 'qrcode'
-    }]
+    html
   });
+  if (error) throw new Error(typeof error === 'string' ? error : JSON.stringify(error));
 }
 
 app.use(express.static(__dirname));
@@ -318,6 +312,19 @@ app.post('/api/tickets/approve', requireScanKey, (req, res) => {
   saveIssuedTickets();
 
   res.json({ approved: true, code, cardholderName: ticket.cardholderName, listNumber: ticket.listNumber });
+});
+
+// Imagen del QR usada dentro del correo del ticket (ver sendTicketEmail). El
+// código del ticket ya va en texto plano dentro del mismo correo, así que
+// esta ruta no expone nada que no esté ahí ya.
+app.get('/api/tickets/qr/:code', async (req, res) => {
+  try {
+    const buffer = await QRCode.toBuffer(req.params.code, { width: 320, margin: 2 });
+    res.set('Content-Type', 'image/png');
+    res.send(buffer);
+  } catch (err) {
+    res.status(400).end();
+  }
 });
 
 // Lista completa para imprimir antes del evento (respaldo en papel).
