@@ -410,7 +410,7 @@
     return qty === PROMO_QTY ? PROMO_PRICE_USD : CONFIG.priceUSD;
   }
 
-  function renderPaymentButton(){
+  async function renderPaymentButton(){
     const name = buyerNameInput.value.trim();
     const nameParts = name.split(/\s+/).filter(Boolean);
     const ppButtonEl = document.getElementById('pp-button');
@@ -435,6 +435,20 @@
 
     const amountCents = Math.round(pricePerTicket(quantity) * quantity * 100);
     const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+
+    // Guardamos el nombre de nuestro lado, indexado por este mismo
+    // clientTransactionId: Payphone no garantiza devolver de vuelta ningún
+    // campo libre con el nombre, así que no dependemos de su Confirm para eso.
+    try {
+      await fetch('/api/tickets/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientTransactionId, cardholderName: name })
+      });
+    } catch (err) {
+      console.error('No se pudo registrar el nombre antes del pago:', err);
+    }
+
     new PPaymentButtonBox({
       token: CONFIG.payphoneToken,
       clientTransactionId,
@@ -445,8 +459,6 @@
       currency: 'USD',
       storeId: CONFIG.payphoneStoreId,
       reference: `Ticket Ruby Haze x${quantity}`,
-      optionalParameter1: String(quantity),
-      optionalParameter2: name,
       lang: 'es'
     }).render('pp-button');
   }

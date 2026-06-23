@@ -46,6 +46,21 @@ function quantityFromAmount(amountCents, fallbackParam) {
 
 const resend = new Resend(RESEND_API_KEY);
 
+// El comprador escribe su nombre completo en nuestra propia página antes de
+// que aparezca el botón de pago. Lo guardamos aquí, indexado por el
+// clientTransactionId que generamos en el navegador, porque Payphone no
+// documenta (ni garantiza devolver en el Confirm) ningún campo libre como
+// optionalParameter1/2 — solo optionalParameter3/4 vienen de vuelta, y ese
+// mapeo tampoco está documentado. Así el nombre no depende de Payphone.
+const pendingPurchases = new Map();
+
+function cleanupPendingPurchases() {
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  for (const [key, value] of pendingPurchases) {
+    if (value.createdAt < cutoff) pendingPurchases.delete(key);
+  }
+}
+
 // Protege contra llamadas externas (correo, webhook) que se queden colgadas:
 // nunca deben poder bloquear la respuesta al comprador más de `ms`.
 function withTimeout(promise, ms, label) {
@@ -144,6 +159,7 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
       <div style="padding:26px 24px 4px;">
         <p style="margin:0 0 4px; color:#111111; font-size:14px; text-align:center;">Hola${greetingName},</p>
         <p style="margin:0; color:#555555; font-size:13px; line-height:1.6; text-align:center;">${intro}</p>
+        <p style="margin:14px 0 0; color:#999999; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; text-align:center;">Ruby Haze Team</p>
       </div>
 
       <div style="border-top:2px dashed #dddddd; margin:22px 24px 0;"></div>
@@ -151,22 +167,28 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
       <div style="padding:22px 24px; text-align:center;">
         <img src="${qrUrl}" alt="Código QR del ticket" width="220" height="220">
         <p style="color:#bbbbbb; font-size:11px; letter-spacing:0.04em; margin:10px 0 4px;">${ticketCode}</p>
-        <p style="display:inline-block; background:#0a0a0a !important; color:${TICKET_ACCENT} !important; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; padding:6px 14px; border-radius:14px; margin-top:4px;">${groupLabel}</p>
+        <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:4px auto 0;">
+          <tr>
+            <td bgcolor="#0a0a0a" style="background-color:#0a0a0a; border-radius:14px; padding:6px 14px;">
+              <span style="color:${TICKET_ACCENT}; font-weight:800; font-size:11px; letter-spacing:0.05em; text-transform:uppercase; font-family:Arial, sans-serif;">${groupLabel}</span>
+            </td>
+          </tr>
+        </table>
       </div>
 
-      <div style="background:#0a0a0a !important; padding:18px 24px; text-align:center;">
-        <p style="color:rgba(255,255,255,0.5) !important; font-size:11px; margin:0 0 8px;">¿Tienes dudas? Escríbenos por WhatsApp o correo:</p>
-        <p style="margin:0 0 6px; font-size:12px;">
-          <a href="mailto:${TICKET_CONTACT_EMAIL}" style="color:${TICKET_ACCENT} !important; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
-        </p>
-        <p style="margin:0; font-size:12px;">
-          ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" style="color:${TICKET_ACCENT} !important; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
-        </p>
-      </div>
-
-      <div style="padding:14px 24px; text-align:center;">
-        <p style="margin:0; color:#999999; font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">Ruby Haze Team</p>
-      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td bgcolor="#0a0a0a" style="background-color:#0a0a0a; padding:18px 24px; text-align:center;">
+            <p style="color:#cccccc; font-size:11px; margin:0 0 8px; font-family:Arial, sans-serif;">¿Tienes dudas? Escríbenos por WhatsApp o correo:</p>
+            <p style="margin:0 0 6px; font-size:12px; font-family:Arial, sans-serif;">
+              <a href="mailto:${TICKET_CONTACT_EMAIL}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400;">${TICKET_CONTACT_EMAIL}</a>
+            </p>
+            <p style="margin:0; font-size:12px; font-family:Arial, sans-serif;">
+              ${TICKET_WHATSAPP_NUMBERS.map((wa) => `<a href="https://wa.me/${wa.number}?text=${waText}" style="color:${TICKET_ACCENT}; text-decoration:none; font-weight:400; margin:0 8px;">${wa.display}</a>`).join('·')}
+            </p>
+          </td>
+        </tr>
+      </table>
 
     </div>
     </body>
@@ -227,6 +249,22 @@ function payphonePost(hostPath, payload) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Se llama justo antes de mostrar el botón de pago (ver renderPaymentButton
+// en ticketsTHETRIBEPTII.html), para dejar el nombre ya guardado de nuestro
+// lado antes de que el comprador llegue a pagar.
+app.post('/api/tickets/intent', (req, res) => {
+  const { clientTransactionId, cardholderName } = req.body || {};
+  if (!clientTransactionId || !cardholderName) {
+    return res.status(400).json({ ok: false });
+  }
+  cleanupPendingPurchases();
+  pendingPurchases.set(clientTransactionId, {
+    cardholderName: String(cardholderName).trim(),
+    createdAt: Date.now()
+  });
+  res.json({ ok: true });
+});
+
 // La Cajita de Payphone hace el Prepare directo desde el navegador.
 // Aquí solo confirmamos el pago de forma segura contra la API real de Payphone.
 app.post('/api/payphone/confirm', async (req, res) => {
@@ -265,10 +303,12 @@ app.post('/api/payphone/confirm', async (req, res) => {
       usedTransactions.add(transactionId);
 
       const quantity = quantityFromAmount(Number(data.amount), data.optionalParameter1);
-      // optionalParameter2 es el nombre que el comprador escribió en nuestra
-      // propia página; optionalParameter4 es el que Payphone autocompleta
-      // desde el formulario de tarjeta, pero no siempre llega.
-      const cardholderName = (data.optionalParameter2 || data.optionalParameter4 || '').trim();
+      // El nombre lo escribió el comprador en nuestra página y quedó
+      // guardado por clientTransactionId vía /api/tickets/intent;
+      // optionalParameter4 (autocompletado por Payphone) queda solo de respaldo.
+      const pending = pendingPurchases.get(clientTransactionId);
+      pendingPurchases.delete(clientTransactionId);
+      const cardholderName = (pending && pending.cardholderName) || (data.optionalParameter4 || '').trim();
       const ticketCode = `RH-${data.transactionId}`;
       const listNumber = registerIssuedTicket(ticketCode, {
         transactionId: data.transactionId,
