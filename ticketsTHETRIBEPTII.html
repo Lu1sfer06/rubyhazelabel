@@ -303,7 +303,7 @@
 
     <div class="price-block">
       <p class="price-label">Entrada preventa</p>
-      <p class="price-amount" id="eventPrice">$15.92</p>
+      <p class="price-amount" id="eventPrice">$1.00</p>
     </div>
 
     <p class="door-note">El día del evento, sujeto a disponibilidad muy limitada, la entrada en puerta tendría un valor de $20. No garantizamos la venta de entradas ese día debido al aforo permitido del lugar.</p>
@@ -394,6 +394,9 @@
   const MAX_QTY = 5;
   const PROMO_QTY = 5;
   const PROMO_PRICE_USD = 11.68; // grupo de 5: cada entrada deja $11 netos tras la comisión de Payphone
+  // TEMPORAL: precio de prueba con Payphone en modo real, solo para 1 entrada
+  // individual. Quitar y volver a usar CONFIG.priceUSD una vez hecha la prueba.
+  const TEST_SINGLE_PRICE_USD = 1.00;
   let quantity = 0;
 
   const qtyValueEl = document.getElementById('qtyValue');
@@ -407,7 +410,9 @@
   let nameTouched = false;
 
   function pricePerTicket(qty){
-    return qty === PROMO_QTY ? PROMO_PRICE_USD : CONFIG.priceUSD;
+    if(qty === PROMO_QTY) return PROMO_PRICE_USD;
+    if(qty === 1) return TEST_SINGLE_PRICE_USD;
+    return CONFIG.priceUSD;
   }
 
   async function renderPaymentButton(){

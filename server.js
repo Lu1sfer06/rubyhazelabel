@@ -29,10 +29,15 @@ const EVENT = {
 const MAX_QTY = 5;
 const PROMO_QTY = 5;
 const PRICE_USD = 15.92;
+// TEMPORAL: precio de prueba con Payphone en modo real, solo para 1 entrada
+// individual. Quitar y volver a usar PRICE_USD una vez hecha la prueba.
+const TEST_SINGLE_PRICE_USD = 1.00;
 const PROMO_PRICE_USD = 11.68;
 
 function pricePerTicket(qty) {
-  return qty === PROMO_QTY ? PROMO_PRICE_USD : PRICE_USD;
+  if (qty === PROMO_QTY) return PROMO_PRICE_USD;
+  if (qty === 1) return TEST_SINGLE_PRICE_USD;
+  return PRICE_USD;
 }
 
 // Compara el monto cobrado (en centavos) contra cada cantidad posible y
@@ -102,7 +107,7 @@ function saveIssuedTickets() {
 
 const issuedTickets = loadIssuedTickets();
 
-function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity }) {
+function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity, email, phoneNumber }) {
   const listNumber = Object.keys(issuedTickets).length + 1;
   issuedTickets[code] = {
     listNumber,
@@ -110,6 +115,8 @@ function registerIssuedTicket(code, { transactionId, cardholderName, document, q
     cardholderName: cardholderName || '',
     document: document || '',
     quantity,
+    email: email || '',
+    phoneNumber: phoneNumber || '',
     entriesApproved: 0,
     usedAt: null
   };
@@ -149,7 +156,9 @@ function postToSheetWebhook(ticket) {
       cardholderName: ticket.cardholderName,
       document: ticket.document,
       quantity: ticket.quantity,
-      transactionId: ticket.transactionId
+      transactionId: ticket.transactionId,
+      email: ticket.email,
+      phoneNumber: ticket.phoneNumber
     })
   }).then(async (res) => {
     // Apps Script responde HTTP 200 incluso cuando falla (ej. timeout del
@@ -382,7 +391,9 @@ app.post('/api/payphone/confirm', async (req, res) => {
         transactionId: data.transactionId,
         cardholderName,
         document: data.document,
-        quantity
+        quantity,
+        email: data.email,
+        phoneNumber: data.phoneNumber
       });
       syncToSheet(issuedTickets[ticketCode]);
 

@@ -216,6 +216,11 @@
   }, { passive: false });
 
   let scanKey = sessionStorage.getItem('rh_scan_key') || '';
+  // Para reiniciar el contador manualmente (ej. tras una prueba) basta con
+  // abrir esta página con ?reset=1 al final de la URL una sola vez.
+  if(new URLSearchParams(window.location.search).get('reset') === '1'){
+    localStorage.removeItem('rh_scanned_count');
+  }
   // Vive en localStorage (no sessionStorage) para que sobreviva a recargas
   // de la página durante toda la noche del evento; solo se pierde si se
   // borran los datos del navegador o se abre el escáner en otro dispositivo.
