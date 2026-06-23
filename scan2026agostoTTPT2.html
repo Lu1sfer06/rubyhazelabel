@@ -216,7 +216,10 @@
   }, { passive: false });
 
   let scanKey = sessionStorage.getItem('rh_scan_key') || '';
-  let scannedCount = 0;
+  // Vive en localStorage (no sessionStorage) para que sobreviva a recargas
+  // de la página durante toda la noche del evento; solo se pierde si se
+  // borran los datos del navegador o se abre el escáner en otro dispositivo.
+  let scannedCount = parseInt(localStorage.getItem('rh_scanned_count'), 10) || 0;
   let busy = false;
   let scanner = null;
   let pendingCode = '';
@@ -236,6 +239,7 @@
   function startScanner(){
     gate.style.display = 'none';
     scannerWrap.style.display = 'flex';
+    statsEl.textContent = scannedCount + ' entradas aprobadas';
 
     scanner = new Html5Qrcode('reader');
     scanner.start(
@@ -339,6 +343,7 @@
 
       if(data.approved){
         scannedCount += data.approvedNow;
+        localStorage.setItem('rh_scanned_count', scannedCount);
         statsEl.textContent = scannedCount + ' entradas aprobadas';
         result.className = 'result ok';
         resultMain.textContent = data.remaining > 0
