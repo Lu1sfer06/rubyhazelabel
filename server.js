@@ -86,10 +86,13 @@ const usedTransactions = new Set();
 // Registro de tickets emitidos (uno por compra, sin importar la cantidad de
 // personas) y si ya fueron aprobados en la puerta. `listNumber` es el número
 // correlativo que aparece en la lista impresa para cotejar a mano. Se
-// persiste a disco para sobrevivir un reinicio del proceso durante el
-// evento; un *redeploy* en Railway sí lo borra, así que no se debe hacer
-// push de código mientras el evento está en curso.
-const TICKETS_DB_PATH = path.join(__dirname, 'tickets-db.json');
+// persiste a disco para sobrevivir un reinicio del proceso. Sin un volumen
+// persistente en Railway, el disco del contenedor es efímero y un redeploy
+// lo borra entero — incluyendo tickets reales ya vendidos. TICKETS_DB_DIR
+// debe apuntar a la carpeta montada del volumen (ver Settings > Volumes en
+// Railway) para que esto sobreviva a cada deploy.
+const TICKETS_DB_DIR = (process.env.TICKETS_DB_DIR || __dirname).trim();
+const TICKETS_DB_PATH = path.join(TICKETS_DB_DIR, 'tickets-db.json');
 
 function loadIssuedTickets() {
   try {
