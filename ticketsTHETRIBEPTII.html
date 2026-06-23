@@ -321,9 +321,9 @@
       <p class="pay-instructions">Puedes pagar con tarjeta de crédito o débito de cualquier banco, sin problema, de forma segura gracias a Payphone. Cada entrada llegará a tu correo como un ticket con su propio código QR.</p>
 
       <div class="name-field">
-        <label for="buyerName">Nombre y apellido (para tu ticket)</label>
-        <input type="text" id="buyerName" placeholder="Ej. María Pérez" autocomplete="name">
-        <p class="name-hint" id="nameHint">Escribe tu nombre completo para continuar con el pago.</p>
+        <label for="buyerName">Nombre y dos apellidos (para tu ticket)</label>
+        <input type="text" id="buyerName" placeholder="Ej. María Pérez Vélez" autocomplete="name">
+        <p class="name-hint" id="nameHint">Escribe tu nombre y tus dos apellidos para continuar con el pago.</p>
       </div>
 
       <div class="qty-selector">
@@ -411,11 +411,19 @@
 
   function renderPaymentButton(){
     const name = buyerNameInput.value.trim();
+    const nameParts = name.split(/\s+/).filter(Boolean);
     const ppButtonEl = document.getElementById('pp-button');
     ppButtonEl.innerHTML = '';
 
-    if(!name){
-      nameHintEl.style.display = nameTouched ? 'block' : 'none';
+    if(nameParts.length < 3){
+      if(nameTouched){
+        nameHintEl.textContent = !name
+          ? 'Escribe tu nombre y tus dos apellidos para continuar con el pago.'
+          : 'Falta al menos un apellido: escribe nombre y los dos apellidos completos.';
+        nameHintEl.style.display = 'block';
+      } else {
+        nameHintEl.style.display = 'none';
+      }
       return;
     }
     nameHintEl.style.display = 'none';
