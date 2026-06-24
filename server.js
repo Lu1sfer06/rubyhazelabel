@@ -741,6 +741,24 @@ app.post('/api/tickets/activate', requireScanKey, (req, res) => {
   res.json({ activated: true, ticketCode });
 });
 
+// Para pruebas en la puerta: vuelve a marcar un ticket como "sin usar" sin
+// tocar su listNumber, nombre ni demás datos — solo el estado de aprobación.
+app.post('/api/tickets/reset-approval', requireScanKey, (req, res) => {
+  const { code, transactionId } = req.body || {};
+  const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
+  if (!ticketCode) {
+    return res.status(400).json({ error: 'Falta code o transactionId.' });
+  }
+  const ticket = issuedTickets[ticketCode];
+  if (!ticket) {
+    return res.json({ reset: false, reason: 'no existe', ticketCode });
+  }
+  ticket.entriesApproved = 0;
+  ticket.usedAt = null;
+  saveIssuedTickets();
+  res.json({ reset: true, ticketCode });
+});
+
 // Ticket de cortesía/invitado, sin pago real de por medio: genera su propio
 // código (prefijo MANUAL en vez de un Transaction ID de Payphone) y lo deja
 // igual de válido para el escáner. Si se da un correo, se le envía el ticket

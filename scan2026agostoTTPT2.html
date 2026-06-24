@@ -103,19 +103,20 @@
   .result.pending{ background: rgba(219, 206, 68, 0.15); border:2px solid var(--yellow); color: var(--yellow); }
   .result .code{ display:block; font-size:0.75rem; font-weight:500; color:#ffffff; margin-top:8px; }
 
-  .guest-badge{
+  .category-badge{
     display:block;
-    background: linear-gradient(135deg, #f0e58a, var(--yellow) 45%, #b8972a);
-    color:#0a0a0a;
     font-weight:900;
-    font-size:0.75rem;
-    letter-spacing:0.08em;
+    font-size:1.15rem;
+    letter-spacing:0.06em;
     text-transform:uppercase;
     text-align:center;
     border-radius:10px;
-    padding:6px 10px;
-    margin-bottom:8px;
+    padding:9px 10px;
+    margin-bottom:10px;
   }
+  .category-badge.cat-individual{ background:#ffffff; color:#0a0a0a; }
+  .category-badge.cat-grupal{ background: linear-gradient(135deg, #c41230, #7a0c1d); color:#ffffff; }
+  .category-badge.cat-cortesia{ background: linear-gradient(135deg, #f0e58a, var(--yellow) 45%, #b8972a); color:#0a0a0a; }
 
   .result-details{ margin-top:8px; }
   .result-details p{ margin:3px 0; font-size:0.88rem; color:#ffffff; font-weight:500; }
@@ -170,7 +171,7 @@
   <div id="scannerWrap" style="display:none;">
     <div id="reader"></div>
     <div class="result" id="result">
-      <span class="guest-badge" id="guestBadge" style="display:none;">Invitado/a — revisar lista de invitados</span>
+      <span class="category-badge" id="categoryBadge" style="display:none;"></span>
       <span id="resultMain"></span>
       <div class="result-details" id="resultDetails" style="display:none;">
         <p><span id="resultListLabel">Lista #</span><strong id="resultListNum"></strong> — <strong id="resultName"></strong></p>
@@ -209,7 +210,7 @@
   const resultDoc = document.getElementById('resultDoc');
   const resultQty = document.getElementById('resultQty');
   const resultActions = document.getElementById('resultActions');
-  const guestBadge = document.getElementById('guestBadge');
+  const categoryBadge = document.getElementById('categoryBadge');
   const approveBtn = document.getElementById('approveBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const resultCode = document.getElementById('resultCode');
@@ -273,9 +274,34 @@
     });
   }
 
-  function showFail(message){
+  // Clasifica el ticket para mostrar de un vistazo qué tipo es — esto es lo
+  // que más le importa al encargado de la puerta para leerlo rápido.
+  function categoryFor(data){
+    if(data.isGuest) return { label: 'CORTESÍA', cls: 'cat-cortesia' };
+    if(data.quantity > 1) return { label: 'GRUPAL', cls: 'cat-grupal' };
+    return { label: 'INDIVIDUAL', cls: 'cat-individual' };
+  }
+
+  function showCategory(data){
+    const cat = categoryFor(data);
+    categoryBadge.textContent = cat.label;
+    categoryBadge.className = 'category-badge ' + cat.cls;
+    categoryBadge.style.display = 'block';
+  }
+
+  function hideCategory(){
+    categoryBadge.style.display = 'none';
+  }
+
+  function listLabelFor(data){
+    if(data.isGuest && data.guestListNumber) return { label: 'Invitado #', value: data.guestListNumber };
+    if(data.isGuest) return { label: '', value: '(sin número, buscar por nombre)' };
+    return { label: 'Lista #', value: data.listNumber };
+  }
+
+  function showFail(message, data){
     result.className = 'result fail';
-    guestBadge.style.display = 'none';
+    if(data){ showCategory(data); } else { hideCategory(); }
     resultMain.textContent = '✗ ' + message;
     resultDetails.style.display = 'none';
     approveQtyWrap.style.display = 'none';
@@ -320,28 +346,22 @@
         return;
       }
       if(data.used){
-        const who = data.cardholderName ? ' — ' + data.cardholderName + ' (Lista #' + data.listNumber + ')' : '';
+        const listInfo = listLabelFor(data);
+        const who = data.cardholderName ? ' — ' + data.cardholderName + ' (' + listInfo.label + listInfo.value + ')' : '';
         const progreso = data.quantity > 1 ? ` · ${data.entriesApproved}/${data.quantity} ingresaron` : '';
-        showFail('Ya fue usado por completo' + who + progreso + (data.usedAt ? ' · ' + new Date(data.usedAt).toLocaleTimeString() : ''));
+        showFail('Ya fue usado por completo' + who + progreso + (data.usedAt ? ' · ' + new Date(data.usedAt).toLocaleTimeString() : ''), data);
         return;
       }
 
       result.className = 'result pending';
-      guestBadge.style.display = data.isGuest ? 'block' : 'none';
+      showCategory(data);
       const listLabel = data.isGuest ? 'la lista de invitados' : 'la lista impresa';
       resultMain.textContent = data.entriesApproved > 0
         ? `Ticket parcial — ya ingresaron ${data.entriesApproved} de ${data.quantity}, cotéjalo con ${listLabel}`
         : `Ticket encontrado — cotéjalo con ${listLabel}`;
-      if(data.isGuest && data.guestListNumber){
-        resultListLabel.textContent = 'Invitado #';
-        resultListNum.textContent = data.guestListNumber;
-      } else if(data.isGuest){
-        resultListLabel.textContent = '';
-        resultListNum.textContent = '(sin número, buscar por nombre)';
-      } else {
-        resultListLabel.textContent = 'Lista #';
-        resultListNum.textContent = data.listNumber;
-      }
+      const listInfo = listLabelFor(data);
+      resultListLabel.textContent = listInfo.label;
+      resultListNum.textContent = listInfo.value;
       resultName.textContent = data.cardholderName || '(sin nombre)';
       resultDoc.textContent = data.document ? `Cédula: ${data.document}` : '';
       resultQty.textContent = data.quantity > 1 ? `Grupo de ${data.quantity} personas · quedan ${data.remaining} por ingresar` : '1 persona';
