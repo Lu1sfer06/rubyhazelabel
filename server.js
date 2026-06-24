@@ -32,9 +32,13 @@ const PRICE_USD = 15.92;
 // TEMPORAL: precio de prueba con Payphone en modo real, solo para 1 entrada
 // individual. Quitar y volver a usar PRICE_USD una vez hecha la prueba.
 const TEST_SINGLE_PRICE_USD = 1.00;
+// TEMPORAL: precio de prueba para el combo de 3 entradas ($3 en total).
+// Quitar y volver a usar PRICE_USD una vez hecha la prueba.
+const TEST_TRIPLE_TOTAL_USD = 3.00;
 
 function pricePerTicket(qty) {
   if (qty === 1) return TEST_SINGLE_PRICE_USD;
+  if (qty === 3) return TEST_TRIPLE_TOTAL_USD / 3;
   return PRICE_USD;
 }
 
