@@ -352,11 +352,10 @@ async function composeTicketImage({ ticketCode, cardholderName, quantity }) {
   y += footerH;
 
   const totalH = Math.ceil(y);
-  // El SVG se dibuja en coordenadas "lógicas" de WIDTH px, pero se exporta
-  // a 1.5x de tamaño real (viewBox vs width/height) para que se vea nítido
-  // en pantallas de celular modernas sin tener que recalcular el diseño.
-  const OUTPUT_SCALE = 1.5;
-  const svg = `<svg width="${WIDTH * OUTPUT_SCALE}" height="${totalH * OUTPUT_SCALE}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
+  // Tamaño 1:1 (sin escalar): prioriza menos uso de memoria/CPU por
+  // petición sobre la nitidez extra, para no arriesgar la estabilidad del
+  // servidor con recursos limitados.
+  const svg = `<svg width="${WIDTH}" height="${totalH}" viewBox="0 0 ${WIDTH} ${totalH}" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="${WIDTH}" height="${totalH}" fill="#ffffff"/>
     <image x="0" y="0" width="${WIDTH}" height="${headerH}" href="data:image/png;base64,${TICKET_HEADER_IMAGE_B64}"/>
     ${parts.join('\n')}
