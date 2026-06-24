@@ -107,8 +107,27 @@ function withTimeout(promise, ms, label) {
 // transactionId de pagos ya mostrados/confirmados. Cada enlace de
 // confirmación es de un solo uso: si alguien recarga, navega con
 // atrás/adelante, o reutiliza la URL (incluso el mismo comprador), no vuelve
-// a mostrarse "¡Listo!" ni se reenvía el ticket/aviso.
-const usedTransactions = new Set();
+// a mostrarse "¡Listo!" ni se reenvía el ticket/aviso. Se persiste a disco
+// porque si esto vive solo en memoria, un reinicio del proceso justo entre
+// dos confirmaciones del mismo pago permite procesarlo dos veces — duplica
+// la fila en el Sheet y pisa el nombre/listNumber ya guardados.
+const USED_TX_DB_PATH = path.join((process.env.TICKETS_DB_DIR || __dirname).trim(), 'used-transactions-db.json');
+
+function loadUsedTransactions() {
+  try {
+    return JSON.parse(fs.readFileSync(USED_TX_DB_PATH, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function saveUsedTransactions() {
+  fs.writeFile(USED_TX_DB_PATH, JSON.stringify([...usedTransactions], null, 2), (err) => {
+    if (err) console.error('Error guardando used-transactions-db.json:', err);
+  });
+}
+
+const usedTransactions = new Set(loadUsedTransactions());
 
 // Registro de tickets emitidos (uno por compra, sin importar la cantidad de
 // personas) y si ya fueron aprobados en la puerta. `listNumber` es el número
@@ -523,7 +542,11 @@ async function sendTicketEmail({ email, cardholderName, quantity, ticketCode }) 
 // Reintenta hasta 4 veces (con pausa de 1.5s entre cada una) tanto si
 // Payphone responde sin transactionStatus todavía como si la llamada falla
 // del todo (timeout, error de red): un solo hiccup puntual con Payphone no
-// debe perder una venta cuya tarjeta ya fue cobrada.
+// debe perder una venta cuya tarjeta ya fue cobrada. También reintenta si ya
+// está Approved pero todavía no trae correo/teléfono: Payphone a veces tarda
+// un par de consultas en terminar de poblar esos campos, y si nos quedamos
+// con la primera respuesta vacía, el Sheet queda sin esos datos para
+// siempre (no hay forma de re-sincronizar una fila ya escrita).
 async function payphoneConfirmWithRetries(payload, maxAttempts = 4) {
   let lastData = null;
   let lastErr = null;
@@ -532,7 +555,9 @@ async function payphoneConfirmWithRetries(payload, maxAttempts = 4) {
       const { data } = await payphonePost('/api/button/V2/Confirm', payload);
       lastData = data;
       lastErr = null;
-      if (data.transactionStatus) return data;
+      const ready = data.transactionStatus && data.transactionStatus !== 'Approved'
+        || (data.transactionStatus === 'Approved' && (data.email || data.phoneNumber));
+      if (ready) return data;
     } catch (err) {
       lastErr = err;
     }
@@ -625,10 +650,17 @@ app.post('/api/payphone/confirm', async (req, res) => {
     if (data.transactionStatus === 'Approved') {
       // Se marca como usada ANTES de responder: si dos peticiones llegan casi
       // al mismo tiempo, solo una debe poder mostrar éxito y notificar.
-      if (usedTransactions.has(transactionId)) {
+      // El guard real contra duplicados es issuedTickets (persistido a disco):
+      // usedTransactions es solo un atajo en memoria para no volver a llamar a
+      // Payphone, pero si el proceso se reinició y se vació, este chequeo
+      // contra el ticket ya emitido evita registrarlo dos veces y duplicar la
+      // fila en el Sheet.
+      const ticketCodeCheck = `RH-${data.transactionId}`;
+      if (usedTransactions.has(transactionId) || issuedTickets[ticketCodeCheck]) {
         return res.json({ success: false, status: 'AlreadyUsed' });
       }
       usedTransactions.add(transactionId);
+      saveUsedTransactions();
 
       const quantity = quantityFromAmount(Number(data.amount), data.optionalParameter1);
       // El nombre lo escribió el comprador en nuestra página y quedó
@@ -714,6 +746,7 @@ app.post('/api/tickets/wipe', requireScanKey, (req, res) => {
   pendingPurchases.clear();
   saveIssuedTickets();
   savePendingPurchases();
+  saveUsedTransactions();
   res.json({ wiped: true, removed });
 });
 
