@@ -61,13 +61,38 @@ const resend = new Resend(RESEND_API_KEY);
 // documenta (ni garantiza devolver en el Confirm) ningún campo libre como
 // optionalParameter1/2 — solo optionalParameter3/4 vienen de vuelta, y ese
 // mapeo tampoco está documentado. Así el nombre no depende de Payphone.
-const pendingPurchases = new Map();
+// Se persiste a disco (igual que issuedTickets) porque si un redeploy cae
+// justo entre que el comprador escribe su nombre y termina de pagar, perder
+// esto en memoria deja el ticket sin nombre para siempre.
+const PENDING_DB_PATH = path.join((process.env.TICKETS_DB_DIR || __dirname).trim(), 'pending-purchases-db.json');
+
+function loadPendingPurchases() {
+  try {
+    return Object.entries(JSON.parse(fs.readFileSync(PENDING_DB_PATH, 'utf8')));
+  } catch {
+    return [];
+  }
+}
+
+function savePendingPurchases() {
+  const obj = Object.fromEntries(pendingPurchases);
+  fs.writeFile(PENDING_DB_PATH, JSON.stringify(obj, null, 2), (err) => {
+    if (err) console.error('Error guardando pending-purchases-db.json:', err);
+  });
+}
+
+const pendingPurchases = new Map(loadPendingPurchases());
 
 function cleanupPendingPurchases() {
   const cutoff = Date.now() - 60 * 60 * 1000;
+  let changed = false;
   for (const [key, value] of pendingPurchases) {
-    if (value.createdAt < cutoff) pendingPurchases.delete(key);
+    if (value.createdAt < cutoff) {
+      pendingPurchases.delete(key);
+      changed = true;
+    }
   }
+  if (changed) savePendingPurchases();
 }
 
 // Protege contra llamadas externas (correo, webhook) que se queden colgadas:
@@ -113,7 +138,11 @@ function saveIssuedTickets() {
 const issuedTickets = loadIssuedTickets();
 
 function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity, email, phoneNumber }) {
-  const listNumber = Object.keys(issuedTickets).length + 1;
+  // Los tickets de cortesía (RH-MANUAL...) no ocupan número de la lista real:
+  // tienen su propio guestListNumber, anotado a mano en la lista de invitados.
+  const isGuest = code.startsWith('RH-MANUAL');
+  const realCount = Object.keys(issuedTickets).filter((c) => !c.startsWith('RH-MANUAL')).length;
+  const listNumber = isGuest ? null : realCount + 1;
   issuedTickets[code] = {
     listNumber,
     transactionId,
@@ -570,6 +599,7 @@ app.post('/api/tickets/intent', (req, res) => {
     cardholderName: String(cardholderName).trim(),
     createdAt: Date.now()
   });
+  savePendingPurchases();
   res.json({ ok: true });
 });
 
@@ -606,6 +636,7 @@ app.post('/api/payphone/confirm', async (req, res) => {
       // optionalParameter4 (autocompletado por Payphone) queda solo de respaldo.
       const pending = pendingPurchases.get(clientTransactionId);
       pendingPurchases.delete(clientTransactionId);
+      savePendingPurchases();
       const cardholderName = (pending && pending.cardholderName) || (data.optionalParameter4 || '').trim();
       // TEMPORAL: para diagnosticar por qué a veces no llega correo/teléfono
       // al Sheet — confirma qué campos manda Payphone realmente. Quitar una
@@ -682,6 +713,7 @@ app.post('/api/tickets/wipe', requireScanKey, (req, res) => {
   usedTransactions.clear();
   pendingPurchases.clear();
   saveIssuedTickets();
+  savePendingPurchases();
   res.json({ wiped: true, removed });
 });
 
@@ -743,6 +775,56 @@ app.post('/api/tickets/activate', requireScanKey, (req, res) => {
   delete issuedTickets[ticketCode].disabled;
   saveIssuedTickets();
   res.json({ activated: true, ticketCode });
+});
+
+// Borra un ticket por completo del registro (a diferencia de /deactivate,
+// que solo lo marca inválido). Para limpiar pruebas/duplicados, no para
+// reembolsos de ventas reales (para eso, /deactivate).
+app.post('/api/tickets/delete', requireScanKey, (req, res) => {
+  const { code, transactionId } = req.body || {};
+  const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
+  if (!ticketCode) {
+    return res.status(400).json({ error: 'Falta code o transactionId.' });
+  }
+  if (!issuedTickets[ticketCode]) {
+    return res.json({ deleted: false, reason: 'no existe', ticketCode });
+  }
+  delete issuedTickets[ticketCode];
+  saveIssuedTickets();
+  res.json({ deleted: true, ticketCode });
+});
+
+// Corrige a mano cardholderName/document/email/phoneNumber de un ticket ya
+// existente (ej. el nombre no se guardó por un corte justo al pagar). No
+// toca listNumber ni el estado de aprobación.
+app.post('/api/tickets/edit', requireScanKey, (req, res) => {
+  const { code, transactionId, cardholderName, document, email, phoneNumber } = req.body || {};
+  const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
+  if (!ticketCode) {
+    return res.status(400).json({ error: 'Falta code o transactionId.' });
+  }
+  const ticket = issuedTickets[ticketCode];
+  if (!ticket) {
+    return res.json({ edited: false, reason: 'no existe', ticketCode });
+  }
+  if (cardholderName !== undefined) ticket.cardholderName = cardholderName;
+  if (document !== undefined) ticket.document = document;
+  if (email !== undefined) ticket.email = email;
+  if (phoneNumber !== undefined) ticket.phoneNumber = phoneNumber;
+  saveIssuedTickets();
+  res.json({ edited: true, ticketCode, ticket });
+});
+
+// Recalcula el listNumber correlativo de los tickets reales (no de
+// cortesía) en orden de creación. Sirve para realinear la numeración tras
+// borrar tickets de prueba que la hubieran corrido.
+app.post('/api/tickets/renumber-real', requireScanKey, (req, res) => {
+  const realCodes = Object.keys(issuedTickets).filter((c) => !c.startsWith('RH-MANUAL'));
+  realCodes.forEach((code, i) => {
+    issuedTickets[code].listNumber = i + 1;
+  });
+  saveIssuedTickets();
+  res.json({ renumbered: true, count: realCodes.length });
 });
 
 // Para pruebas en la puerta: vuelve a marcar un ticket como "sin usar" sin
