@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <title>Escaneo de Tickets | Ruby Haze</title>
 <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -119,20 +120,23 @@
   .category-badge.cat-grupal{ background: linear-gradient(135deg, #c41230, #7a0c1d); color:#ffffff; }
   .category-badge.cat-cortesia{ background: linear-gradient(135deg, #f0e58a, var(--yellow) 45%, #b8972a); color:#0a0a0a; }
 
-  .result-details{ margin-top:8px; }
-  .result-details p{ margin:3px 0; font-size:0.88rem; color:#ffffff; font-weight:500; }
+  .result-details{ margin-top:10px; }
+  .result-details p{ margin:4px 0; color:#ffffff; }
+  .result-details p:first-of-type{ font-size:1.5rem; font-weight:900; line-height:1.25; }
+  #resultDoc{ font-size:1.3rem; font-weight:800; }
+  #resultQty{ font-size:0.85rem; font-weight:500; color:rgba(255,255,255,0.75); margin-top:8px !important; }
 
-  .approve-qty{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:10px; }
+  .approve-qty{ display:flex; align-items:center; justify-content:center; gap:18px; margin-top:24px; }
   .approve-qty span{ font-size:0.8rem; color:rgba(255,255,255,0.7); }
   .approve-qty-btn{
-    width:34px; height:34px; border-radius:10px; border:none;
-    background:rgba(255,255,255,0.12); color:#ffffff; font-size:1.1rem;
+    width:54px; height:54px; border-radius:14px; border:none;
+    background:rgba(255,255,255,0.12); color:#ffffff; font-size:1.7rem;
     font-weight:800; cursor:pointer; touch-action: manipulation; user-select: none;
   }
   .approve-qty-btn:disabled{ opacity:0.3; cursor:not-allowed; }
   #approveQtyValue{ font-size:1.1rem; font-weight:800; color: var(--yellow); min-width:28px; display:inline-block; }
 
-  .result-actions{ display:flex; gap:10px; margin-top:10px; }
+  .result-actions{ display:flex; gap:10px; margin-top:28px; }
   .approve-btn, .cancel-btn{
     flex:1;
     border:none;
@@ -356,10 +360,9 @@
 
       result.className = 'result pending';
       showCategory(data);
-      const listLabel = data.isGuest ? 'la lista de invitados' : 'la lista impresa';
       resultMain.textContent = data.entriesApproved > 0
-        ? `Ticket parcial — ya ingresaron ${data.entriesApproved} de ${data.quantity}, cotéjalo con ${listLabel}`
-        : `Ticket encontrado — cotéjalo con ${listLabel}`;
+        ? `Ticket parcial — ya ingresaron ${data.entriesApproved} de ${data.quantity}`
+        : `Ticket encontrado`;
       const listInfo = listLabelFor(data);
       resultListLabel.textContent = listInfo.label;
       resultListNum.textContent = listInfo.value;
