@@ -159,9 +159,15 @@ const issuedTickets = loadIssuedTickets();
 function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity, email, phoneNumber }) {
   // Los tickets de cortesía (RH-MANUAL...) no ocupan número de la lista real:
   // tienen su propio guestListNumber, anotado a mano en la lista de invitados.
+  // Individuales y grupos cada uno lleva su propio numerado desde el 1, igual
+  // que las pestañas "Individuales" y "Grupos" del Sheet — son listas
+  // impresas separadas, así que el #1 de una no debe chocar con el #1 de la otra.
   const isGuest = code.startsWith('RH-MANUAL');
-  const realCount = Object.keys(issuedTickets).filter((c) => !c.startsWith('RH-MANUAL')).length;
-  const listNumber = isGuest ? null : realCount + 1;
+  const isGroup = quantity > 1;
+  const sameTypeCount = Object.entries(issuedTickets).filter(
+    ([c, t]) => !c.startsWith('RH-MANUAL') && (t.quantity > 1) === isGroup
+  ).length;
+  const listNumber = isGuest ? null : sameTypeCount + 1;
   issuedTickets[code] = {
     listNumber,
     transactionId,
@@ -849,15 +855,17 @@ app.post('/api/tickets/edit', requireScanKey, (req, res) => {
 });
 
 // Recalcula el listNumber correlativo de los tickets reales (no de
-// cortesía) en orden de creación. Sirve para realinear la numeración tras
-// borrar tickets de prueba que la hubieran corrido.
+// cortesía) en orden de creación. Individuales y grupos se renumeran cada
+// uno por separado desde el 1, igual que las pestañas del Sheet. Sirve para
+// realinear la numeración tras borrar tickets de prueba que la hubieran corrido.
 app.post('/api/tickets/renumber-real', requireScanKey, (req, res) => {
   const realCodes = Object.keys(issuedTickets).filter((c) => !c.startsWith('RH-MANUAL'));
-  realCodes.forEach((code, i) => {
-    issuedTickets[code].listNumber = i + 1;
-  });
+  const individualCodes = realCodes.filter((c) => !(issuedTickets[c].quantity > 1));
+  const groupCodes = realCodes.filter((c) => issuedTickets[c].quantity > 1);
+  individualCodes.forEach((code, i) => { issuedTickets[code].listNumber = i + 1; });
+  groupCodes.forEach((code, i) => { issuedTickets[code].listNumber = i + 1; });
   saveIssuedTickets();
-  res.json({ renumbered: true, count: realCodes.length });
+  res.json({ renumbered: true, individuales: individualCodes.length, grupos: groupCodes.length });
 });
 
 // Para pruebas en la puerta: vuelve a marcar un ticket como "sin usar" sin
