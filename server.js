@@ -6,9 +6,31 @@ const https = require('https');
 const { Resend } = require('resend');
 const QRCode = require('qrcode');
 const sharp = require('sharp');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Frena scripts que intenten adivinar SCAN_PASSWORD o saturar las rutas de
+// admin/escáner a fuerza bruta. El límite es alto a propósito para no
+// afectar al personal de puerta escaneando rápido durante el evento real.
+const adminLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones, espera unos minutos.' }
+});
+
+// Frena scripts que intenten spamear compras/pagos. Un comprador real
+// reintentando una tarjeta rechazada nunca se acerca a este límite.
+const purchaseLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos, espera unos minutos.' }
+});
 
 const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
@@ -612,7 +634,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Se llama justo antes de mostrar el botón de pago (ver renderPaymentButton
 // en ticketsTHETRIBEPTII.html), para dejar el nombre ya guardado de nuestro
 // lado antes de que el comprador llegue a pagar.
-app.post('/api/tickets/intent', (req, res) => {
+app.post('/api/tickets/intent', purchaseLimiter, (req, res) => {
   const { clientTransactionId, cardholderName } = req.body || {};
   if (!clientTransactionId || !cardholderName) {
     return res.status(400).json({ ok: false });
@@ -628,7 +650,7 @@ app.post('/api/tickets/intent', (req, res) => {
 
 // La Cajita de Payphone hace el Prepare directo desde el navegador.
 // Aquí solo confirmamos el pago de forma segura contra la API real de Payphone.
-app.post('/api/payphone/confirm', async (req, res) => {
+app.post('/api/payphone/confirm', purchaseLimiter, async (req, res) => {
   const { id, clientTransactionId } = req.body || {};
   if (!id || !clientTransactionId) {
     return res.status(400).json({ error: 'Faltan datos de confirmación.' });
@@ -721,11 +743,13 @@ app.post('/api/payphone/confirm', async (req, res) => {
 
 // Solo el personal de la puerta, con la clave de escaneo, puede usar estas rutas.
 function requireScanKey(req, res, next) {
-  const key = (req.headers['x-scan-key'] || '').trim();
-  if (!SCAN_PASSWORD || key !== SCAN_PASSWORD) {
-    return res.status(401).json({ error: 'unauthorized' });
-  }
-  next();
+  adminLimiter(req, res, () => {
+    const key = (req.headers['x-scan-key'] || '').trim();
+    if (!SCAN_PASSWORD || key !== SCAN_PASSWORD) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    next();
+  });
 }
 
 // Paso 1: al escanear, solo consulta los datos del ticket (no lo marca como
