@@ -1269,6 +1269,17 @@ app.get(/^\/[\w-]+$/, (req, res, next) => {
 });
 
 
+// TEMPORAL — borrar después del reset
+app.post('/api/admin/reset-all', requireAdminKey, (req, res) => {
+  for (const code of Object.keys(issuedTickets)) delete issuedTickets[code];
+  saveIssuedTickets();
+  pendingPurchases.clear();
+  savePendingPurchases();
+  usedTransactions.clear();
+  saveUsedTransactions();
+  res.json({ ok: true, msg: 'Todos los tickets borrados.' });
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
