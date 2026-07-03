@@ -592,7 +592,7 @@ async function payphoneConfirmWithRetries(payload, maxAttempts = 4) {
   throw lastErr;
 }
 
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { extensions: ['html'] }));
 app.use(express.json());
 
 // El fetch nativo de Node (undici) recibe un 500 "Runtime Error" de la API
