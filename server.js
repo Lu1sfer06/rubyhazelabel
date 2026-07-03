@@ -35,8 +35,10 @@ const purchaseLimiter = rateLimit({
 const PAYPHONE_TOKEN = (process.env.PAYPHONE_TOKEN || '').trim();
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
 const SCAN_PASSWORD = (process.env.SCAN_PASSWORD || '').trim();
+const TICKETS_ADMIN_PASSWORD = (process.env.TICKETS_ADMIN_PASSWORD || '').trim();
 const SHEETS_WEBHOOK_URL = (process.env.SHEETS_WEBHOOK_URL || '').trim();
 const SHEETS_WEBHOOK_SECRET = (process.env.SHEETS_WEBHOOK_SECRET || '').trim();
+const PROMOTER_PASSWORD = (process.env.PROMOTER_PASSWORD || '').trim();
 
 // EDITAR: datos del evento mostrados en el correo del ticket.
 const EVENT = {
@@ -50,7 +52,7 @@ const EVENT = {
 // cobrado, ya que los optionalParameter que le pasamos a la Cajita de
 // Payphone no siempre llegan de vuelta en el Confirm.
 const MAX_QTY = 5;
-const PRICE_USD = 15.92;
+const PRICE_USD = 20.92;
 
 function pricePerTicket(qty) {
   return PRICE_USD;
@@ -170,7 +172,7 @@ function saveIssuedTickets() {
 
 const issuedTickets = loadIssuedTickets();
 
-function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity, email, phoneNumber }) {
+function registerIssuedTicket(code, { transactionId, cardholderName, document, quantity, email, phoneNumber, promotorCode }) {
   // Los tickets de cortesía (RH-MANUAL...) no ocupan número de la lista real:
   // tienen su propio guestListNumber, anotado a mano en la lista de invitados.
   // Individuales y grupos cada uno lleva su propio numerado desde el 1, igual
@@ -190,6 +192,8 @@ function registerIssuedTicket(code, { transactionId, cardholderName, document, q
     quantity,
     email: email || '',
     phoneNumber: phoneNumber || '',
+    promotorCode: promotorCode || '',
+    createdAt: new Date().toISOString(),
     entriesApproved: 0,
     usedAt: null
   };
@@ -231,7 +235,8 @@ function postToSheetWebhook(ticket) {
       quantity: ticket.quantity,
       transactionId: ticket.transactionId,
       email: ticket.email,
-      phoneNumber: ticket.phoneNumber
+      phoneNumber: ticket.phoneNumber,
+      promotorCode: ticket.promotorCode || ''
     })
   }).then(async (res) => {
     // Apps Script responde HTTP 200 incluso cuando falla (ej. timeout del
@@ -635,13 +640,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // en ticketsTHETRIBEPTII.html), para dejar el nombre ya guardado de nuestro
 // lado antes de que el comprador llegue a pagar.
 app.post('/api/tickets/intent', purchaseLimiter, (req, res) => {
-  const { clientTransactionId, cardholderName } = req.body || {};
+  const { clientTransactionId, cardholderName, promotorCode } = req.body || {};
   if (!clientTransactionId || !cardholderName) {
     return res.status(400).json({ ok: false });
   }
   cleanupPendingPurchases();
   pendingPurchases.set(clientTransactionId, {
     cardholderName: String(cardholderName).trim(),
+    promotorCode: String(promotorCode || '').trim().toLowerCase(),
     createdAt: Date.now()
   });
   savePendingPurchases();
@@ -690,6 +696,7 @@ app.post('/api/payphone/confirm', purchaseLimiter, async (req, res) => {
       pendingPurchases.delete(clientTransactionId);
       savePendingPurchases();
       const cardholderName = (pending && pending.cardholderName) || (data.optionalParameter4 || '').trim();
+      const promotorCode = (pending && pending.promotorCode) || '';
       // TEMPORAL: para diagnosticar por qué a veces no llega correo/teléfono
       // al Sheet — confirma qué campos manda Payphone realmente. Quitar una
       // vez resuelto.
@@ -709,7 +716,8 @@ app.post('/api/payphone/confirm', purchaseLimiter, async (req, res) => {
         document: data.document,
         quantity,
         email: data.email,
-        phoneNumber: data.phoneNumber
+        phoneNumber: data.phoneNumber,
+        promotorCode
       });
       syncToSheet(issuedTickets[ticketCode]);
 
@@ -745,9 +753,9 @@ app.post('/api/payphone/confirm', purchaseLimiter, async (req, res) => {
 function requireScanKey(req, res, next) {
   adminLimiter(req, res, () => {
     const key = (req.headers['x-scan-key'] || '').trim();
-    if (!SCAN_PASSWORD || key !== SCAN_PASSWORD) {
-      return res.status(401).json({ error: 'unauthorized' });
-    }
+    const valid = (SCAN_PASSWORD && key === SCAN_PASSWORD) ||
+                  (TICKETS_ADMIN_PASSWORD && key === TICKETS_ADMIN_PASSWORD);
+    if (!valid) return res.status(401).json({ error: 'unauthorized' });
     next();
   });
 }
@@ -900,6 +908,38 @@ app.post('/api/tickets/reset-approval', requireScanKey, (req, res) => {
   ticket.usedAt = null;
   saveIssuedTickets();
   res.json({ reset: true, ticketCode });
+});
+
+// Resta una sola entrada de un ticket de grupo, sin resetear las demás
+// (útil para corregir un escaneo accidental sin deshacer todas las aprobaciones).
+app.post('/api/tickets/subtract-entry', requireScanKey, (req, res) => {
+  const { code, transactionId } = req.body || {};
+  const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
+  if (!ticketCode) return res.status(400).json({ error: 'Falta code o transactionId.' });
+  const ticket = issuedTickets[ticketCode];
+  if (!ticket) return res.json({ subtracted: false, reason: 'no existe', ticketCode });
+  if (typeof ticket.entriesApproved !== 'number' || ticket.entriesApproved <= 0)
+    return res.json({ subtracted: false, reason: 'ya en cero', ticketCode });
+  ticket.entriesApproved = Math.max(0, ticket.entriesApproved - 1);
+  if (ticket.entriesApproved === 0) ticket.usedAt = null;
+  saveIssuedTickets();
+  res.json({ subtracted: true, ticketCode, entriesApproved: ticket.entriesApproved, remaining: ticketRemaining(ticket) });
+});
+
+// Permite fijar exactamente cuántas entradas tiene aprobadas un ticket de grupo
+// sin tener que restar una por una (útil para el panel admin).
+app.post('/api/tickets/set-entries', requireScanKey, (req, res) => {
+  const { code, entries } = req.body || {};
+  const ticketCode = (code || '').trim();
+  if (!ticketCode) return res.status(400).json({ error: 'Falta code.' });
+  const ticket = issuedTickets[ticketCode];
+  if (!ticket) return res.status(404).json({ error: 'no existe', ticketCode });
+  const max = ticket.quantity || 1;
+  const n = Math.max(0, Math.min(max, parseInt(entries, 10) || 0));
+  ticket.entriesApproved = n;
+  if (n === 0) ticket.usedAt = null;
+  saveIssuedTickets();
+  res.json({ ok: true, ticketCode, entriesApproved: n, max });
 });
 
 // Ticket de cortesía/invitado, sin pago real de por medio: genera su propio
@@ -1077,6 +1117,144 @@ app.get('/api/tickets/list', requireScanKey, (req, res) => {
     .map(([code, t]) => ({ code, ...t }))
     .sort((a, b) => a.listNumber - b.listNumber);
   res.json({ list });
+});
+
+// ── PROMOTORES DB ──────────────────────────────────────────────────────────────
+// Lista de promotores registrados y su estado (activo/inactivo).
+// Se persiste a disco junto a los otros DBs del servidor.
+const PROMOTORES_DB_PATH = path.join(TICKETS_DB_DIR, 'promotores-db.json');
+
+function loadPromotoresDB() {
+  try { return JSON.parse(fs.readFileSync(PROMOTORES_DB_PATH, 'utf8')); }
+  catch { return []; }
+}
+function savePromotoresDB() {
+  fs.writeFile(PROMOTORES_DB_PATH, JSON.stringify(promotoresDB, null, 2), (err) => {
+    if (err) console.error('Error guardando promotores-db.json:', err);
+  });
+}
+const promotoresDB = loadPromotoresDB();
+
+function requireAdminKey(req, res, next) {
+  const key = (req.headers['x-promoter-key'] || '').trim();
+  if (!PROMOTER_PASSWORD || key !== PROMOTER_PASSWORD)
+    return res.status(401).json({ error: 'unauthorized' });
+  next();
+}
+
+// Lista de promotores registrados (admin).
+app.get('/api/promotores/registered', requireAdminKey, (req, res) => {
+  res.json({ promotores: promotoresDB });
+});
+
+// Registrar un nuevo promotor (admin).
+app.post('/api/promotores/register', requireAdminKey, (req, res) => {
+  const { name, code, password } = req.body || {};
+  if (!name || !code || !password) return res.status(400).json({ error: 'Faltan name, code o password.' });
+  const clean = code.trim().toLowerCase();
+  if (promotoresDB.find(p => p.code === clean))
+    return res.json({ ok: false, reason: 'already_exists' });
+  promotoresDB.push({ name: name.trim(), code: clean, active: true, password: password.trim() });
+  savePromotoresDB();
+  res.json({ ok: true });
+});
+
+// Cambiar la clave individual de un promotor (admin).
+app.post('/api/promotores/set-password', requireAdminKey, (req, res) => {
+  const { code, password } = req.body || {};
+  const clean = (code || '').trim().toLowerCase();
+  const p = promotoresDB.find(p => p.code === clean);
+  if (!p) return res.json({ ok: false, reason: 'not_found' });
+  p.password = (password || '').trim();
+  savePromotoresDB();
+  res.json({ ok: true });
+});
+
+// Quitar un promotor permanentemente (admin).
+app.post('/api/promotores/remove', requireAdminKey, (req, res) => {
+  const { code } = req.body || {};
+  const clean = (code || '').trim().toLowerCase();
+  const idx = promotoresDB.findIndex(p => p.code === clean);
+  if (idx === -1) return res.json({ ok: false, reason: 'not_found' });
+  promotoresDB.splice(idx, 1);
+  savePromotoresDB();
+  res.json({ ok: true });
+});
+
+// Activar o desactivar un promotor (admin).
+app.post('/api/promotores/toggle', requireAdminKey, (req, res) => {
+  const { code } = req.body || {};
+  const clean = (code || '').trim().toLowerCase();
+  const p = promotoresDB.find(p => p.code === clean);
+  if (!p) return res.json({ ok: false, reason: 'not_found' });
+  p.active = !p.active;
+  savePromotoresDB();
+  res.json({ ok: true, active: p.active });
+});
+
+// Vista de ranking para promotores: solo top 5 + posición propia.
+// Cada promotor tiene su propia clave guardada en promotoresDB.
+app.get('/api/promotores/ranking', (req, res) => {
+  const key = (req.headers['x-promoter-key'] || '').trim();
+  const me = (req.query.me || '').trim().toLowerCase();
+
+  const registro = promotoresDB.find(p => p.code === me);
+  if (!registro) return res.status(403).json({ error: 'not_registered' });
+  if (!registro.active) return res.status(403).json({ error: 'inactive' });
+  if (!registro.password || key !== registro.password)
+    return res.status(401).json({ error: 'unauthorized' });
+
+  const byPromotor = {};
+  for (const [, ticket] of Object.entries(issuedTickets)) {
+    const pr = (ticket.promotorCode || '').toLowerCase();
+    if (!pr) continue;
+    if (!byPromotor[pr]) byPromotor[pr] = { code: pr, tickets: 0, ordenes: 0 };
+    byPromotor[pr].tickets += ticket.quantity;
+    byPromotor[pr].ordenes += 1;
+  }
+
+  // Añade fullName desde promotoresDB para que el frontend muestre el nombre
+  // real registrado en vez de reconstruirlo desde el código.
+  function withFullName(entry) {
+    const reg = promotoresDB.find(p => p.code === entry.code);
+    return { ...entry, fullName: reg ? reg.name : null };
+  }
+
+  const ranking = Object.values(byPromotor).sort((a, b) => b.tickets - a.tickets).map(withFullName);
+  const top5 = ranking.slice(0, 5);
+  const myPos = ranking.findIndex(p => p.code === me);
+  const myStats = withFullName(byPromotor[me] || { code: me, tickets: 0, ordenes: 0 });
+  const above = myPos > 0 ? ranking[myPos - 1] : null;
+
+  res.json({ top5, ranking, myPos: myPos + 1, myStats, above, total: ranking.length });
+});
+
+// Resumen de ventas por promotor. Protegido por PROMOTER_PASSWORD (env var).
+app.get('/api/promotores/stats', requireAdminKey, (req, res) => {
+  const byPromotor = {};
+  for (const [code, ticket] of Object.entries(issuedTickets)) {
+    const pr = (ticket.promotorCode || '').toLowerCase() || '__directo__';
+    if (!byPromotor[pr]) byPromotor[pr] = { code: pr, tickets: 0, ordenes: [] };
+    byPromotor[pr].tickets += ticket.quantity;
+    byPromotor[pr].ordenes.push({
+      ticketCode: code,
+      cardholderName: ticket.cardholderName,
+      document: ticket.document || '',
+      email: ticket.email || '',
+      phoneNumber: ticket.phoneNumber || '',
+      quantity: ticket.quantity,
+      createdAt: ticket.createdAt || null
+    });
+  }
+
+  const promotores = Object.values(byPromotor)
+    .filter(p => p.code !== '__directo__')
+    .sort((a, b) => b.tickets - a.tickets);
+
+  const directo = byPromotor['__directo__'] || { tickets: 0, ordenes: [] };
+  const total = Object.values(byPromotor).reduce((s, p) => s + p.tickets, 0);
+
+  res.json({ promotores, directo, total, registered: promotoresDB });
 });
 
 // Permite abrir cualquier página estática sin escribir ".html" en la URL

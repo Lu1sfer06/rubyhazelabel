@@ -166,6 +166,7 @@
     position: relative;
     height: 100vh;
     width: 100%;
+    overflow: hidden;
   }
 
   .hero .placeholder{
@@ -184,11 +185,38 @@
   }
 
   .hero-logo{
-    width: min(820px, 88vw);
-    height: min(320px, 38vh);
+    display: block;
+    line-height: 0;
   }
 
-  .hero-logo img{ object-fit: contain; }
+  .hero-logo img{
+    height: clamp(60px, 10vw, 120px);
+    width: auto;
+    display: block;
+    object-fit: contain;
+  }
+
+  .hero-tribe-title{
+    font-size: clamp(4rem, 11vw, 8.5rem);
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #dbce44;
+    text-align: center;
+    line-height: 0.95;
+    margin: 6px 0 0;
+    font-family: 'Google Sans Flex', sans-serif;
+  }
+
+  .hero-tribe-ft{
+    font-size: clamp(0.85rem, 2.8vw, 1.75rem);
+    font-weight: 300;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.72);
+    text-align: center;
+    margin: 6px 0 24px;
+  }
 
   .scroll-cue{
     position:absolute;
@@ -548,8 +576,13 @@
   }
 
   @keyframes tagGlow{
-    0%, 100%{ box-shadow: 0 0 6px rgba(162,3,26,0.35); }
-    50%{ box-shadow: 0 0 16px rgba(255,90,118,0.85); }
+    0%, 100%{ box-shadow: 0 0 6px rgba(162,3,26,0.4); }
+    50%{ box-shadow: 0 0 16px rgba(162,3,26,0.9); }
+  }
+
+  @keyframes tagGlowYellow{
+    0%, 100%{ box-shadow: 0 0 6px rgba(219,206,68,0.4); }
+    50%{ box-shadow: 0 0 16px rgba(219,206,68,0.9); }
   }
 
   /* RADIO SHOWS */
@@ -752,18 +785,52 @@
   .merch-item .placeholder.coming-soon{
     border: none;
     background: none;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .merch-item .placeholder.coming-soon img{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
   }
 
   .coming-soon-text{
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    font-size: 0.6rem;
     font-weight: 900;
-    font-size: 1rem;
-    letter-spacing: 0.1em;
-    background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.35) 50%, #fff 100%);
-    background-size: 220% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: shimmer 2.8s linear infinite;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #fff;
+    text-align: center;
+    padding: 10px 0;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: csBlur 3s ease-in-out infinite;
+  }
+
+  @keyframes csBlur{
+    0%, 100%{
+      background: rgba(10,10,10,0.25);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    50%{
+      background: rgba(10,10,10,0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
   }
 
   .merch-item h3{
@@ -1029,6 +1096,9 @@
   }
 
   @media (max-width: 560px){
+    .hero-tribe-ft{ font-size: clamp(1rem, 4vw, 1.4rem); font-weight: 400; }
+    .hero-logo img{ height: clamp(90px, 22vw, 160px); }
+    .hero-overlay{ padding-top: 6%; }
     .events-grid{ grid-template-columns: 1fr; }
     section:not(.hero){ padding: 90px 6%; }
     .section-title{ margin-bottom: 24px; }
@@ -1072,6 +1142,253 @@
     .past-events-marquee.dragging{ cursor: grabbing; }
     .past-events-track .placeholder{ flex: 0 0 32%; }
   }
+
+  /* TRIBE EVENT BANNER */
+  .tribe-event-card{
+    grid-column: 1 / -1;
+    display: block;
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2.5px solid #dbce44;
+    box-shadow: 0 0 18px rgba(219,206,68,0.55), 0 0 42px rgba(219,206,68,0.2), 0 10px 36px rgba(0,0,0,0.3);
+    animation: tribePulse 2.8s ease-in-out infinite;
+    transition: transform 0.4s ease;
+    text-decoration: none;
+    touch-action: manipulation;
+  }
+
+  .tribe-event-card.cta-visible .tribe-event-cta{ opacity: 1; }
+  .tribe-event-card.cta-visible img{ filter: brightness(0.6); }
+
+  .tribe-event-card img{
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.5s ease, filter 0.5s ease;
+  }
+
+  .tribe-event-cta{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 900;
+    font-size: clamp(1.2rem, 3.5vw, 2rem);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+  }
+
+  .cta-touch-icon{ display: none; }
+  .cta-click-icon{ display: none; }
+
+  @media (hover: none){
+    .cta-touch-icon{
+      display: block;
+      opacity: 0.85;
+      filter: drop-shadow(0 1px 6px rgba(0,0,0,0.7));
+    }
+  }
+
+  @media (hover: hover){
+    .tribe-event-cta{
+      flex-direction: row;
+      gap: 8px;
+      align-items: center;
+    }
+    .cta-click-icon{
+      display: flex;
+      align-items: center;
+      opacity: 0.85;
+      filter: drop-shadow(0 1px 6px rgba(0,0,0,0.7));
+    }
+  }
+
+  @media (hover: hover) {
+    .tribe-event-card:hover{ transform: scale(1.02); }
+    .tribe-event-card:hover img{ transform: scale(1.04); filter: brightness(0.6); }
+    .tribe-event-card:hover .tribe-event-cta{ opacity: 1; }
+  }
+
+  .tribe-event-tag{
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    background: linear-gradient(90deg, #8a7800 0%, #dbce44 50%, #8a7800 100%);
+    background-size: 220% 100%;
+    color: #000;
+    font-size: 0.48rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 0 0 4px 4px;
+    white-space: nowrap;
+    animation: shimmer 2.6s linear infinite, tagGlowYellow 2.6s ease-in-out infinite;
+  }
+
+  @keyframes tribePulse{
+    0%, 100%{
+      box-shadow: 0 0 18px rgba(219,206,68,0.55), 0 0 42px rgba(219,206,68,0.2), 0 10px 36px rgba(0,0,0,0.3);
+    }
+    50%{
+      box-shadow: 0 0 34px rgba(219,206,68,0.9), 0 0 70px rgba(219,206,68,0.42), 0 10px 36px rgba(0,0,0,0.3);
+    }
+  }
+
+  @keyframes tribePulseMobile{
+    0%, 100%{
+      box-shadow: 0 0 8px rgba(162,3,26,0.3), 0 6px 20px rgba(0,0,0,0.3);
+    }
+    50%{
+      box-shadow: 0 0 16px rgba(162,3,26,0.55), 0 0 28px rgba(162,3,26,0.2), 0 6px 20px rgba(0,0,0,0.3);
+    }
+  }
+
+  @keyframes tribePulseYellow{
+    0%, 100%{
+      box-shadow: 0 0 10px rgba(219,206,68,0.4), 0 6px 20px rgba(0,0,0,0.3);
+    }
+    50%{
+      box-shadow: 0 0 22px rgba(219,206,68,0.85), 0 0 38px rgba(219,206,68,0.3), 0 6px 20px rgba(0,0,0,0.3);
+    }
+  }
+
+
+  /* HERO VIDEO */
+  .hero-bg-vid{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    z-index: 0;
+    transform: scale(1.04);
+    transform-origin: center center;
+  }
+
+  .hero-bg-dim{
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.52);
+    z-index: 1;
+  }
+
+  .hero-overlay{ z-index: 2; }
+
+  /* HERO EVENT BAR */
+  .hero-event-bar{
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 32px 5% 38px;
+    background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%);
+    flex-wrap: wrap;
+  }
+
+  .hero-event-title{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .hero-event-main{
+    font-weight: 900;
+    font-size: clamp(0.85rem, 1.8vw, 1.05rem);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #dbce44;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .hero-event-ft{
+    font-weight: 400;
+    font-size: clamp(0.56rem, 1vw, 0.68rem);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+  }
+
+  .hero-countdown{
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .cd-unit{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .hero-countdown b{
+    font-size: clamp(2.2rem, 5.5vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hero-countdown small{
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.48);
+    font-weight: 700;
+  }
+
+  .cd-sep{
+    font-size: 2.2rem;
+    color: rgba(219,206,68,0.85);
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .hero-tickets-btn{
+    display: inline-block;
+    background: #dbce44;
+    color: #000;
+    font-size: 0.67rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 11px 22px;
+    border-radius: 2px;
+    text-decoration: none;
+    transition: background 0.25s, transform 0.25s;
+    white-space: nowrap;
+    box-shadow: 0 4px 18px rgba(219,206,68,0.45);
+  }
+
+  .hero-tickets-btn:hover{
+    background: #c4b83c;
+    transform: scale(1.04);
+  }
+
+  @media (max-width: 560px){
+    .hero-event-bar{ gap: 12px; padding: 18px 5% 26px; }
+    .hero-event-name{ display: none; }
+    .hero-countdown{ gap: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -1096,11 +1413,23 @@
 <div class="flyer-zoom" id="flyerZoom"><img id="flyerZoomImg" src="" alt="Flyer"></div>
 
 <section class="hero" id="home">
-  <div class="placeholder"><img src="assets/fondo.jpg" alt="Ruby Haze"></div>
+  <video class="hero-bg-vid" autoplay muted loop playsinline preload="auto" src="eventos/gustavito-hero.mp4"></video>
+  <div class="hero-bg-dim"></div>
   <div class="hero-overlay">
-    <div class="hero-logo placeholder"><img src="assets/hero.png" alt="Ruby Haze"></div>
+    <div class="hero-logo"><img src="eventos/rubyhazrcompleto%20blanco.png" alt="Ruby Haze"></div>
+    <h2 class="hero-tribe-title">The Tribe PT.II</h2>
+    <p class="hero-tribe-ft">Ft. Gustavo Pico</p>
+    <div class="hero-countdown">
+      <div class="cd-unit"><b id="cdDays">--</b><small>DÍAS</small></div>
+      <span class="cd-sep">·</span>
+      <div class="cd-unit"><b id="cdHours">--</b><small>HRS</small></div>
+      <span class="cd-sep">·</span>
+      <div class="cd-unit"><b id="cdMins">--</b><small>MIN</small></div>
+      <span class="cd-sep">·</span>
+      <div class="cd-unit"><b id="cdSecs">--</b><small>SEG</small></div>
+    </div>
+    <a class="hero-tickets-btn" href="#events">Tickets Disponibles ↓</a>
   </div>
-  <div class="scroll-cue">Desliza ↓</div>
 </section>
 
 <section id="label">
@@ -1146,14 +1475,27 @@
 <section id="events">
   <h2 class="section-title">Eventos</h2>
   <div class="events-grid">
-    <div class="event-card next next-tease">
-      <div class="tease-text">
-        <span class="tease-line">Stay Tuned</span>
-        <span class="tease-line tease-main">Next Event</span>
-        <span class="tease-line tease-sub">August</span>
-        <span class="tease-line tease-sub">Tickets Available Soon</span>
+    <a href="ticketsTHETRIBEPTII" class="tribe-event-card">
+      <span class="tribe-event-tag">Tickets Disponibles</span>
+      <picture>
+        <source media="(max-width: 600px)" srcset="eventos/flyer%20telefono.png">
+        <img src="eventos/THE%20TRIBE%20BANNER.png" alt="THE TRIBE PT.II — Sábado 01 de Agosto">
+      </picture>
+      <div class="tribe-event-cta">
+        Compra tu entrada
+        <span class="cta-touch-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white">
+            <path d="M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.91-1.38z"/>
+          </svg>
+        </span>
+        <span class="cta-click-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/>
+            <path d="M11.58 11.58 16 16"/>
+          </svg>
+        </span>
       </div>
-    </div>
+    </a>
   </div>
 
   <p class="past-events-label">Past Events</p>
@@ -1223,7 +1565,7 @@
         <h3><span class="sold-out-title">Merch 002</span><span class="sold-out-tag">Sold Out</span></h3>
       </div>
       <div class="merch-item">
-        <div class="placeholder coming-soon"><span class="coming-soon-text">Available Soon</span></div>
+        <div class="placeholder coming-soon"><img src="eventos/Tezza-5904.jpeg" alt="Merch 003"><span class="coming-soon-text">Available Soon</span></div>
         <h3>Merch 003</h3>
       </div>
     </div>
@@ -1511,6 +1853,52 @@
   initDragMarquee('.past-events-marquee', '.past-events-track', 18000, { reverse: true });
   initDragMarquee('#galleryRow1', '.gallery-track-1', 70000, { reverse: true, touchOnly: true });
   initDragMarquee('#galleryRow2', '.gallery-track-2', 70000, { touchOnly: true });
+
+  // Countdown — The Tribe PT.II, Sábado 01 Ago 2026, 9PM Ecuador (UTC-5)
+  (function(){
+    const target = new Date('2026-08-01T21:00:00-05:00');
+    const dEl = document.getElementById('cdDays');
+    const hEl = document.getElementById('cdHours');
+    const mEl = document.getElementById('cdMins');
+    const sEl = document.getElementById('cdSecs');
+    function tick(){
+      const diff = target - Date.now();
+      if(diff <= 0){
+        dEl.textContent = hEl.textContent = mEl.textContent = sEl.textContent = '00';
+        return;
+      }
+      dEl.textContent = String(Math.floor(diff / 86400000)).padStart(2,'0');
+      hEl.textContent = String(Math.floor(diff % 86400000 / 3600000)).padStart(2,'0');
+      mEl.textContent = String(Math.floor(diff % 3600000 / 60000)).padStart(2,'0');
+      sEl.textContent = String(Math.floor(diff % 60000 / 1000)).padStart(2,'0');
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+
+  // Mobile: first tap shows overlay, second tap navigates
+  (function(){
+    var card = document.querySelector('.tribe-event-card');
+    if (!card) return;
+    var ctaVisible = false;
+
+    card.addEventListener('click', function(e){
+      if (window.matchMedia('(hover: hover)').matches) return;
+      if (ctaVisible) return; // second tap → allow navigation
+
+      e.preventDefault();
+      card.classList.add('cta-visible');
+      ctaVisible = true;
+    });
+
+    document.addEventListener('click', function(e){
+      if (ctaVisible && !card.contains(e.target)) {
+        card.classList.remove('cta-visible');
+        ctaVisible = false;
+      }
+    });
+  })();
+
 </script>
 
 </body>

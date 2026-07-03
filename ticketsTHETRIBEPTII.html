@@ -35,10 +35,52 @@
   .bg-photo{
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: -2;
     background:
-      linear-gradient(180deg, rgba(10,10,10,0.6), rgba(10,10,10,0.78)),
+      linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.72) 50%, rgba(10,10,10,0.92) 100%),
       url('eventos/gustavo%20web.jpg') center 40%/cover no-repeat;
+  }
+
+  /* Tercio inferior: videos en bucle */
+  .bg-video-wrap{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 45vh;
+    z-index: -1;
+    overflow: hidden;
+  }
+  @media (max-width: 768px){
+    .bg-video-wrap{ height: 38vh; }
+  }
+  .bg-vid{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.9s ease;
+    filter: grayscale(100%) brightness(0.5);
+  }
+  @media (min-width: 769px){
+    .bg-vid{ filter: grayscale(100%) brightness(0.35) opacity(0.7); }
+  }
+  /* PC: encuadres distintos para mostrar lo importante de cada clip */
+  @media (min-width: 769px){
+    #bgVid1{ object-position: center 50%; }
+    #bgVid2{ object-position: center 40%; }
+  }
+  /* Difuminado: funde la foto de arriba con el video de abajo */
+  .bg-video-fade{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 35%;
+    background: linear-gradient(to bottom, #0a0a0a 0%, rgba(10,10,10,0.5) 60%, transparent 100%);
+    z-index: 1;
+    pointer-events: none;
   }
 
   h1{
@@ -102,24 +144,92 @@
   footer .legal a{ color: rgba(255,255,255,0.6); text-decoration: underline; }
   footer .legal a:hover{ color: var(--yellow); }
 
-  .hero-date{ color: var(--yellow); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 1.7rem; margin-bottom: 6px; }
-  .hero-venue{ color: var(--yellow); font-weight: 600; font-size: 1.35rem; margin-bottom: 6px; }
-  .hero-time{ color: var(--yellow); font-weight: 700; letter-spacing: 0.08em; font-size: 1.35rem; margin-bottom: 28px; }
+  /* Bloque de info de evento */
+  .event-info{ margin-bottom: 28px; text-align: center; }
+  .event-info-line{
+    color: #ffffff;
+    font-size: clamp(0.85rem, 2.2vw, 1.05rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.7;
+  }
+  .event-info-line .lbl{ font-weight: 300; opacity: 0.7; }
+  .event-info-line .bold{ font-weight: 900; }
+  .event-info-line .med{ font-weight: 400; }
 
-  .price-block{ margin-bottom: 16px; }
+  /* LINE UP */
+  .lineup-wrap{
+    margin: 32px 0 28px;
+    text-align: center;
+  }
+  .lineup-badge{
+    display: inline-block;
+    border: 1.5px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding: 4px 18px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 14px;
+  }
+  .lineup-headliner{
+    display: block;
+    font-size: clamp(2.2rem, 7vw, 3.6rem);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    line-height: 1.05;
+    margin-bottom: 10px;
+  }
+  .lineup-support{
+    display: block;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    line-height: 1.8;
+    opacity: 0.85;
+  }
+
+  .price-block{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
   .price-label{
     color: var(--yellow);
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    font-size: 0.95rem;
-    margin-bottom: 8px;
+    font-size: 1rem;
   }
   .price-amount{
-    color: var(--yellow);
+    color: #ffffff;
     font-weight: 900;
-    font-size: clamp(1.6rem, 4vw, 2.1rem);
+    font-size: clamp(2.2rem, 6vw, 3rem);
     letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .price-coctel{
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 2px solid var(--yellow);
+    border-radius: 999px;
+    padding: 6px 16px;
+    color: var(--yellow);
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .door-note{
     color: var(--yellow);
@@ -273,6 +383,12 @@
 <body>
 <div class="bg-photo"></div>
 
+<div class="bg-video-wrap">
+  <video id="bgVid1" class="bg-vid" muted playsinline autoplay preload="auto" src="eventos/clip1.mp4"></video>
+  <video id="bgVid2" class="bg-vid" muted playsinline preload="auto" src="eventos/clip2.mp4" style="opacity:0"></video>
+  <div class="bg-video-fade"></div>
+</div>
+
 <header>
   <div class="logo-mark"><img src="eventos/rombo%20blanco.png" alt="Ruby Haze"></div>
   <a class="back-link" href="/">&larr; Volver al inicio</a>
@@ -282,17 +398,28 @@
 
   <section class="event-hero">
     <h1 id="eventName">THE TRIBE PT.II</h1>
-    <p class="hero-date">Sábado 01 de Agosto</p>
-    <p class="hero-venue">Kuno Seafood Rooftop, Portoviejo</p>
-    <p class="hero-time">9:00 PM</p>
-
-    <div class="price-block">
-      <p class="price-label">Entrada preventa</p>
-      <p class="price-amount" id="eventPrice">$15.92</p>
+    <div class="lineup-wrap">
+      <span class="lineup-badge">Line Up</span>
+      <span class="lineup-headliner">Gustavo Pico</span>
+      <span class="lineup-support">Rahel Santhos &nbsp;·&nbsp; Chichito &nbsp;·&nbsp; Luisfer</span>
+      <span class="lineup-support">George Ordoñez</span>
     </div>
 
-    <p class="door-note">El día del evento, sujeto a disponibilidad muy limitada, la entrada en puerta tendría un valor de $20. No garantizamos la venta de entradas ese día debido al aforo permitido del lugar.</p>
+    <div class="event-info">
+      <p class="event-info-line"><span class="lbl">Lugar : </span><span class="bold">Kuno Seafood Rooftop</span></p>
+      <p class="event-info-line"><span class="bold">Sábado 01 de Agosto / 9PM</span></p>
+      <p class="event-info-line"><span class="med">Portoviejo — Ecuador</span></p>
+    </div>
+
+    <div class="price-block">
+      <p class="price-label">Pre-venta</p>
+      <p class="price-amount" id="eventPrice">20$</p>
+      <span class="price-coctel">Incluye 1 cóctel 🍸</span>
+    </div>
+
+    <p class="door-note">El día del evento, sujeto a disponibilidad muy limitada, la entrada en puerta tendría un valor de $20 (no incluye cóctel). No garantizamos la venta de entradas ese día debido al aforo permitido del lugar.</p>
     <p class="door-note" style="margin-top:22px; color:#ffffff;">Evento con acceso exclusivo +18.</p>
+
   </section>
 
   <section id="purchaseSection">
@@ -303,7 +430,7 @@
     </div>
 
     <div class="pp-card">
-      <p class="pay-instructions">Puedes pagar con tarjeta de crédito o débito de cualquier banco, sin problema, de forma segura gracias a Payphone. Cada entrada llegará a tu correo como un ticket con su propio código QR.</p>
+      <p class="pay-instructions">Puedes pagar con tarjeta de crédito o débito de cualquier banco, de forma segura a través de Payphone. El valor de la entrada es $20; el cobro final será de <strong>$20.92</strong> por IVA aplicado al servicio de pago. Cada entrada llegará a tu correo como un ticket con su propio código QR.</p>
 
       <div class="name-field">
         <label for="buyerName">Nombre y dos apellidos (para tu ticket)</label>
@@ -355,7 +482,7 @@
   // ----- CONFIG: edita aquí los datos reales -----
   const CONFIG = {
     eventName: 'THE TRIBE PT.II',
-    priceUSD: 15.92,
+    priceUSD: 20.92,
     // Token/StoreId de la app "Ruby Haze Tickets" — la Cajita de Payphone exige
     // que estos valores vivan en el navegador, así está diseñado su widget oficial.
     payphoneToken: '9ad8vjrkLEzpFwRti8WJorwelVfDCXOy5VNGJl8i5XkmTclGuP9PkJeiQ6yRxAm1-gqCSw8-9l46DC3UfV1R-0AsAbM5iExqxwNe61O8PkknV05E2hH3MTCuAemtxq6SxO2rX5CBIk2_eia0kmpVmYZ9yIp5p5vZveRGvYS93I_NXHRpmE-kNZIV1lS1bAmYjpqy67xVJzUhDmlzTIzRWU2pnYHyeWyHbh8OMjj7WFbZvGPYZ1xMKM8zc1wiyrbNoq6CIBlBSbjcCSgwJym2Wky9wjxr1Q2C9zZnzDO0wAGwItHdOgQOm5qyLfGM9_vnPxwqru5Nph6y9kb2-0t3EwBAt8k',
@@ -417,15 +544,13 @@
 
     const amountCents = Math.round(pricePerTicket(quantity) * quantity * 100);
     const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    const promotorCode = new URLSearchParams(location.search).get('pr') || '';
 
-    // Guardamos el nombre de nuestro lado, indexado por este mismo
-    // clientTransactionId: Payphone no garantiza devolver de vuelta ningún
-    // campo libre con el nombre, así que no dependemos de su Confirm para eso.
     try {
       await fetch('/api/tickets/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientTransactionId, cardholderName: name })
+        body: JSON.stringify({ clientTransactionId, cardholderName: name, promotorCode })
       });
     } catch (err) {
       console.error('No se pudo registrar el nombre antes del pago:', err);
@@ -471,6 +596,50 @@
   window.addEventListener('DOMContentLoaded', () => {
     updateQty(0);
   });
+</script>
+
+<script>
+  (function () {
+    const v1 = document.getElementById('bgVid1');
+    const v2 = document.getElementById('bgVid2');
+    const CLIP1 = 5.8;
+    const CLIP2 = 9.8;
+    let busy = false;
+
+    const FADE = 900; // ms — debe coincidir con la transición CSS
+
+    function goClip2() {
+      if (busy) return;
+      busy = true;
+      v2.currentTime = 0;
+      v2.play().catch(() => {});       // arranca v2 antes de hacer el fade
+      v2.style.opacity = '1';
+      v1.style.opacity = '0';
+      setTimeout(() => { v1.pause(); busy = false; }, FADE + 100);
+    }
+
+    function goClip1() {
+      if (busy) return;
+      busy = true;
+      v1.currentTime = 0;
+      v1.play().catch(() => {});       // arranca v1 antes de hacer el fade
+      v1.style.opacity = '1';
+      v2.style.opacity = '0';
+      setTimeout(() => { v2.pause(); busy = false; }, FADE + 100);
+    }
+
+    v1.addEventListener('timeupdate', () => {
+      if (!busy && v1.currentTime >= CLIP1) goClip2();
+    });
+
+    v2.addEventListener('timeupdate', () => {
+      if (!busy && v2.currentTime >= CLIP2) goClip1();
+    });
+
+    // Arranque
+    v1.currentTime = 0;
+    v1.play().catch(() => {});
+  })();
 </script>
 
 </body>
