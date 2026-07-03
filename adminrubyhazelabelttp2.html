@@ -677,7 +677,7 @@
           <thead><tr>
             <th>Código</th><th>Comprador</th><th>Cédula</th>
             <th>Correo</th><th>Teléfono</th>
-            <th>Promotor</th><th>Entradas</th><th>Fecha</th>
+            <th>Promotor</th><th>Entradas</th><th>Tipo</th><th>Fecha</th>
           </tr></thead>
           <tbody id="table-ordenes"></tbody>
         </table>
@@ -899,8 +899,9 @@
   }
 
   function renderAll() {
-    const { promotores, total } = statsData;
-    const totalOrdenes = promotores.reduce((s, p) => s + p.ordenes.length, 0);
+    const { promotores, total, directo } = statsData;
+    const directoOrdenes = (directo && directo.ordenes) ? directo.ordenes.length : 0;
+    const totalOrdenes = promotores.reduce((s, p) => s + p.ordenes.length, 0) + directoOrdenes;
 
     document.getElementById('total-tickets').innerHTML = `${total} <span>tickets</span>`;
     document.getElementById('total-ordenes').textContent = totalOrdenes;
@@ -991,9 +992,15 @@
     }).join('');
   }
 
+  function tipoEntrada(o) {
+    if ((o.ticketCode || '').startsWith('RH-MANUAL')) return 'Invitado';
+    if ((o.quantity || 1) > 1) return 'Grupo';
+    return 'Individual';
+  }
+
   function buildFilter() {
     const sel = document.getElementById('filter-promotor');
-    sel.innerHTML = '<option value="">Todos los promotores</option>';
+    sel.innerHTML = '<option value="">Todos</option><option value="__directo__">Sin promotor</option>';
     statsData.promotores.forEach(p => {
       const o = document.createElement('option');
       o.value = p.code;
@@ -1004,21 +1011,26 @@
 
   function renderOrdenes() {
     const filtro = document.getElementById('filter-promotor').value;
-    const lista = statsData.promotores
-      .filter(p => !filtro || p.code === filtro)
-      .flatMap(p => p.ordenes.map(o => ({ ...o, promotor: p.code })))
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const directo = statsData.directo || { ordenes: [] };
+    const directoRows = directo.ordenes.map(o => ({ ...o, promotor: '' }));
+    const promotorRows = statsData.promotores
+      .flatMap(p => p.ordenes.map(o => ({ ...o, promotor: p.code })));
+
+    let lista = [...directoRows, ...promotorRows];
+    if (filtro === '__directo__') lista = directoRows;
+    else if (filtro) lista = promotorRows.filter(o => o.promotor === filtro);
+    lista.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
     document.getElementById('orders-count').textContent = lista.length + ' órdenes';
 
     if (!lista.length) {
       document.getElementById('table-ordenes').innerHTML =
-        `<tr><td colspan="8"><div class="empty-state">Sin órdenes${filtro ? ' para este promotor' : ' registradas aún'}.</div></td></tr>`;
+        `<tr><td colspan="9"><div class="empty-state">Sin órdenes${filtro ? ' para este filtro' : ' registradas aún'}.</div></td></tr>`;
       return;
     }
 
     document.getElementById('table-ordenes').innerHTML = lista.map(o => {
-      const prom = o.promotor ? `<span class="promotor-pill">${promotorName(o.promotor)}</span>` : '<span style="color:#333">—</span>';
+      const prom = o.promotor ? `<span class="promotor-pill">${promotorName(o.promotor)}</span>` : '<span style="color:#555">Directo</span>';
       return `<tr>
         <td><span class="order-id">${o.ticketCode || '—'}</span></td>
         <td style="font-weight:600;color:#fff;">${o.cardholderName || '—'}</td>
@@ -1027,6 +1039,7 @@
         <td style="color:#777;">${o.phoneNumber || '—'}</td>
         <td>${prom}</td>
         <td><span class="qty-badge ${o.quantity > 1 ? 'multi' : ''}">${o.quantity} ${o.quantity === 1 ? 'entrada' : 'entradas'}</span></td>
+        <td style="color:#aaa;font-size:0.75rem;">${tipoEntrada(o)}</td>
         <td class="date-cell">${fmtDate(o.createdAt)}</td>
       </tr>`;
     }).join('');
