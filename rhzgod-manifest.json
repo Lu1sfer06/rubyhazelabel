@@ -1,0 +1,16 @@
+{
+  "name": "RHZGOD",
+  "short_name": "RHZGOD",
+  "start_url": "/adminrubyhazelabelttp2",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#c5282a",
+  "icons": [
+    {
+      "src": "/assets/rhzgod-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
