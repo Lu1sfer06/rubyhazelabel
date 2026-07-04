@@ -976,9 +976,16 @@
     document.getElementById('err-msg').textContent = 'Clave incorrecta. Inténtalo de nuevo.';
   }
 
+  function shortName(fullName) {
+    const parts = (fullName || '').trim().split(/\s+/);
+    if (parts.length < 2) return parts[0] || fullName || '';
+    const lastInitial = (parts[parts.length - 1][0] || '').toUpperCase();
+    return `${parts[0]} ${lastInitial}.`;
+  }
+
   function promotorName(code) {
     const reg = (statsData.registered || []).find(r => r.code === code);
-    return reg ? reg.name : code;
+    return reg ? shortName(reg.name) : code;
   }
 
   function initials(code) {
@@ -1067,8 +1074,8 @@
 
     document.getElementById('podio').innerHTML = top5.map((p, i) => `
       <div class="podio-item ${posClass[i]}">
-        <div class="podio-avatar">${p.name ? p.name.split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('') : initials(p.code)}</div>
-        <div class="podio-name">${p.name || promotorName(p.code)}</div>
+        <div class="podio-avatar">${p.name ? regInitials(p.name) : initials(p.code)}</div>
+        <div class="podio-name">${p.name ? shortName(p.name) : promotorName(p.code)}</div>
         <div class="podio-tickets">${p.tickets}</div>
         <div class="podio-label">tickets</div>
         <div class="podio-step"><span class="podio-rank">${rankLabel[i]}</span></div>
@@ -1195,7 +1202,7 @@
       // name
       ctx.fillStyle = '#ccc';
       ctx.font = '600 11px Arial';
-      const nameShort = (p.name || '—').split(' ').slice(0,2).join(' ');
+      const nameShort = shortName(p.name || '—');
       ctx.fillText(nameShort, x + podioW/2, podioY + barMaxH + 60);
     });
     ctx.textAlign = 'left';
@@ -1231,7 +1238,7 @@
       // name
       ctx.fillStyle = p.tickets > 0 ? '#fff' : '#333';
       ctx.font = `${isTop3 ? '600' : '400'} 13px Arial`;
-      ctx.fillText((p.name || '—').substring(0, 28), 76, ry);
+      ctx.fillText(shortName(p.name || '—'), 76, ry);
 
       // tickets
       ctx.fillStyle = p.tickets > 0 ? (isTop3 ? podioColors[i] : '#aaa') : '#2a2a2a';
@@ -1349,7 +1356,7 @@
   }
 
   /* ── GESTIÓN ── */
-  const SITE_BASE = 'https://rubyhazemusic.com/ticketsTHETRIBEPTII.html';
+  const SITE_BASE = 'https://rubyhazemusic.com/ticketsTHETRIBEPTII';
 
   function toCode(name) {
     return name.trim().toLowerCase()
@@ -1368,8 +1375,8 @@
     return (initials + n).slice(0, 5);
   }
 
-  function regInitials(code) {
-    return (code || '').split('-').slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '??';
+  function regInitials(name) {
+    return (name || '??').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '??';
   }
 
   function previewCode() {
@@ -1458,9 +1465,9 @@
     }
     el.innerHTML = list.map(p => `
       <div class="reg-row${p.active ? '' : ' inactive'}">
-        <div class="reg-avatar">${regInitials(p.code)}</div>
+        <div class="reg-avatar">${regInitials(p.name)}</div>
         <div class="reg-info">
-          <div class="reg-name">${p.name}</div>
+          <div class="reg-name">${shortName(p.name)}</div>
           <div class="reg-code" style="font-size:0.68rem;color:#555;word-break:break-all;">${SITE_BASE}?pr=${p.code}</div>
           <div class="reg-code" style="font-size:0.68rem;color:#444;margin-top:2px;">Clave: <span style="color:#fff;font-weight:700;">${p.password || '—'}</span></div>
         </div>
