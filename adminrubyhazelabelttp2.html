@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RHZGOD — Control Total</title>
+  <link rel="apple-touch-icon" href="assets/rhzgod-icon.png">
+  <link rel="icon" type="image/png" href="assets/rhzgod-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RHZGOD">
+  <meta name="theme-color" content="#c5282a">
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@300;400;600;800;900&display=swap" rel="stylesheet">
   <style>
     *{ box-sizing: border-box; margin: 0; padding: 0; }
@@ -65,8 +71,8 @@
 
     /* ── DASHBOARD ── */
     #dashboard{
-      display: none; width: 100%; max-width: 940px;
-      padding: 48px 24px 80px; align-self: flex-start;
+      display: none; width: 100%; max-width: 1400px;
+      padding: 48px 40px 80px; align-self: flex-start;
     }
     .dash-header{
       display: flex; align-items: center; justify-content: space-between;
@@ -344,6 +350,22 @@
       font-family: inherit; transition: all 0.2s; white-space: nowrap;
     }
     .btn-remove:hover{ border-color: #c5282a; color: #c5282a; background: rgba(197,40,42,0.06); }
+
+    /* ── DESKTOP 2-COL RESUMEN ── */
+    @media(min-width:900px){
+      #tab-resumen{
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 32px;
+        align-items: start;
+      }
+      #tab-resumen .podio{ flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 0; }
+      #tab-resumen .podio-item{ max-width: none; flex-direction: row; text-align: left; gap: 12px; padding: 10px 14px; background: #111; border-radius: 10px; }
+      #tab-resumen .podio-avatar{ margin-bottom: 0; flex-shrink: 0; }
+      #tab-resumen .podio-bar-wrap{ display: none; }
+      .stats-cards{ display: flex; gap: 16px; flex-wrap: nowrap; }
+      .stat-card{ flex: 1; min-width: 0; }
+    }
 
     @media(max-width:600px){
       #dashboard{ padding: 24px 12px 60px; }
