@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>RHZGOD — Control Total</title>
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/rhzgod-icon.png">
   <link rel="icon" type="image/png" sizes="180x180" href="/assets/rhzgod-icon.png">
@@ -13,7 +13,7 @@
   <meta name="theme-color" content="#c5282a">
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@300;400;600;800;900&display=swap" rel="stylesheet">
   <style>
-    *{ box-sizing: border-box; margin: 0; padding: 0; }
+    *{ box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
     body{
       font-family: 'Google Sans Flex','Arial',sans-serif;
       background: #0a0a0a; color: #fff;
@@ -387,10 +387,11 @@
       .podio-item.p1 .podio-rank{ font-size: 0.75rem; }
 
       /* summary cards */
-      .summary-cards{ grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-      .summary-cards .card:last-child{ grid-column: span 2; }
-      .card{ padding: 14px 16px; }
-      .card .card-value{ font-size: 1.6rem; }
+      .summary-cards{ grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 18px; }
+      .card{ padding: 12px 14px; border-radius: 10px; }
+      .card .card-label{ font-size: 0.48rem; margin-bottom: 5px; }
+      .card .card-value{ font-size: 1.4rem; }
+      .card .card-value span{ font-size: 0.7rem; }
 
       /* tabs */
       .tabs{ width: 100%; }
@@ -414,18 +415,20 @@
       #tab-ordenes tbody{ display: block; }
       #tab-ordenes tbody tr{
         display: flex; flex-direction: column;
-        padding: 14px 16px; gap: 7px;
+        padding: 16px; gap: 8px;
         border-bottom: 1px solid #1a1a1a;
+        background: #0f0f0f;
+        margin-bottom: 6px; border-radius: 10px;
       }
       #tab-ordenes tbody td{
         display: flex; align-items: center; gap: 10px;
-        padding: 0; border: none; font-size: 0.82rem;
+        padding: 0; border: none; font-size: 0.84rem; line-height: 1.4;
       }
       #tab-ordenes tbody td::before{
         content: attr(data-label);
-        font-size: 0.52rem; font-weight: 800; letter-spacing: 0.16em;
-        text-transform: uppercase; color: #444;
-        min-width: 70px; flex-shrink: 0;
+        font-size: 0.5rem; font-weight: 800; letter-spacing: 0.16em;
+        text-transform: uppercase; color: #555;
+        min-width: 72px; flex-shrink: 0;
       }
 
       /* gestión */
@@ -1290,15 +1293,15 @@
     document.getElementById('table-ordenes').innerHTML = lista.map(o => {
       const prom = o.promotor ? `<span class="promotor-pill">${promotorName(o.promotor)}</span>` : '<span style="color:#555">Directo</span>';
       return `<tr>
-        <td><span class="order-id">${o.ticketCode || '—'}</span></td>
-        <td style="font-weight:600;color:#fff;">${o.cardholderName || '—'}</td>
-        <td style="color:#777;">${o.document || '—'}</td>
-        <td style="color:#888;font-size:0.75rem;">${o.email || '—'}</td>
-        <td style="color:#777;">${o.phoneNumber || '—'}</td>
-        <td>${prom}</td>
-        <td><span class="qty-badge ${o.quantity > 1 ? 'multi' : ''}">${o.quantity} ${o.quantity === 1 ? 'entrada' : 'entradas'}</span></td>
-        <td style="color:#aaa;font-size:0.75rem;">${tipoEntrada(o)}</td>
-        <td class="date-cell">${fmtDate(o.createdAt)}</td>
+        <td data-label="Código"><span class="order-id">${o.ticketCode || '—'}</span></td>
+        <td data-label="Comprador" style="font-weight:600;color:#fff;">${o.cardholderName || '—'}</td>
+        <td data-label="Cédula" style="color:#777;">${o.document || '—'}</td>
+        <td data-label="Correo" style="color:#888;font-size:0.75rem;">${o.email || '—'}</td>
+        <td data-label="Teléfono" style="color:#777;">${o.phoneNumber || '—'}</td>
+        <td data-label="Promotor">${prom}</td>
+        <td data-label="Entradas"><span class="qty-badge ${o.quantity > 1 ? 'multi' : ''}">${o.quantity} ${o.quantity === 1 ? 'entrada' : 'entradas'}</span></td>
+        <td data-label="Tipo" style="color:#aaa;font-size:0.75rem;">${tipoEntrada(o)}</td>
+        <td data-label="Fecha" class="date-cell">${fmtDate(o.createdAt)}</td>
       </tr>`;
     }).join('');
   }
