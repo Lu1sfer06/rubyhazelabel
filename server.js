@@ -194,7 +194,7 @@ function registerIssuedTicket(code, { transactionId, cardholderName, document, q
     phoneNumber: phoneNumber || '',
     promotorCode: promotorCode || '',
     createdAt: new Date().toISOString(),
-    entriesApproved: 0,
+    entriesApproved: quantity,
     usedAt: null
   };
   saveIssuedTickets();
@@ -1269,6 +1269,23 @@ app.get(/^\/[\w-]+$/, (req, res, next) => {
 });
 
 
+
+app.get('/api/admin/event-day', requireAdminKey, (req, res) => {
+  const all = Object.values(issuedTickets);
+  const totalTickets = all.filter(t => !t.disabled).reduce((s, t) => s + (t.quantity || 1), 0);
+  const scanned = all.filter(t => t.usedAt);
+  const entered = scanned.length;
+  const byHour = {};
+  scanned.forEach(t => {
+    const h = new Date(t.usedAt).getHours();
+    byHour[h] = (byHour[h] || 0) + 1;
+  });
+  const recent = [...scanned]
+    .sort((a, b) => new Date(b.usedAt) - new Date(a.usedAt))
+    .slice(0, 30)
+    .map(t => ({ name: t.cardholderName || '—', usedAt: t.usedAt, listNumber: t.listNumber, quantity: t.quantity || 1 }));
+  res.json({ totalTickets, entered, byHour, recent });
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
