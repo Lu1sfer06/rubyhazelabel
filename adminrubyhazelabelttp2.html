@@ -362,7 +362,7 @@
     @media(max-width:600px){
       #dashboard{ padding: 24px 12px 60px; }
       .dash-header h1{ font-size: 1.3rem; }
-      .badge-event{ display: none; }
+      .badge-event{ font-size: 0.52rem; padding: 4px 8px; }
 
       /* podio */
       .podio{ gap: 3px; margin-bottom: 24px; }
@@ -663,6 +663,7 @@
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
       <span class="badge-event">The Tribe PT.II</span>
+      <button class="logout-btn" onclick="refreshAll(this)" id="refresh-btn" title="Actualizar datos">↺</button>
       <button class="logout-btn" onclick="logout()">Salir</button>
     </div>
   </div>
@@ -681,7 +682,12 @@
     <div class="table-wrap">
       <p class="table-title">
         <span>Ranking completo</span>
-        <button onclick="downloadSemana()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;padding:6px 14px;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;">↓ Descargar semana</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="filter-resumen" onchange="renderResumen()" style="background:#111;border:1px solid #222;color:#aaa;border-radius:8px;padding:6px 10px;font-size:0.68rem;font-family:inherit;outline:none;">
+            <option value="">Todos</option>
+          </select>
+          <button onclick="downloadSemana()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;padding:6px 14px;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;">↓ Descargar</button>
+        </div>
       </p>
       <table>
         <thead><tr>
@@ -751,7 +757,6 @@
       <p class="add-form-title">Agregar promotor</p>
       <div class="add-form-row">
         <input type="text" id="new-promotor-name" placeholder="Nombre y apellido" oninput="previewCode()" onkeydown="if(event.key==='Enter')addPromotor()">
-        <input type="text" id="new-promotor-pass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')addPromotor()">
         <button class="btn-add" onclick="addPromotor()">Registrar</button>
       </div>
       <p class="code-preview" id="code-preview"></p>
@@ -993,9 +998,10 @@
     const directoOrdenes = (directo && directo.ordenes) ? directo.ordenes.length : 0;
     const totalOrdenes = promotores.reduce((s, p) => s + p.ordenes.length, 0) + directoOrdenes;
 
+    const activeRegistered = (statsData.registered || []).filter(r => r.active).length;
     document.getElementById('total-tickets').innerHTML = `${total} <span>tickets</span>`;
     document.getElementById('total-ordenes').textContent = totalOrdenes;
-    document.getElementById('total-promotores').textContent = promotores.length;
+    document.getElementById('total-promotores').textContent = activeRegistered;
 
     renderPodio();
     renderResumen();
@@ -1006,6 +1012,20 @@
     const now = new Date();
     document.getElementById('updated-time').textContent =
       `Actualizado: ${now.toLocaleDateString('es-EC')} · ${now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  async function refreshAll(btn) {
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    try {
+      const res = await fetch('/api/promotores/stats', { headers: { 'x-promoter-key': sessionKey } });
+      if (res.status === 401) { logout(); return; }
+      statsData = await res.json();
+      renderAll();
+      const activeTab = document.querySelector('.tab-panel.active');
+      if (activeTab?.id === 'tab-evento') loadEventDay();
+      if (activeTab?.id === 'tab-tickets' && tkUnlocked) tkLoadData();
+    } catch (e) { console.error('refreshAll error', e); }
+    finally { if (btn) { btn.disabled = false; btn.style.opacity = ''; } }
   }
 
   function switchTab(id, btn) {
@@ -1057,17 +1077,24 @@
   }
 
   function renderResumen() {
-    const { promotores } = statsData;
-    if (!promotores.length) {
+    const filtroR = (document.getElementById('filter-resumen')?.value || '');
+    const salesMap = {};
+    (statsData.promotores || []).forEach(p => { salesMap[p.code] = { tickets: p.tickets, ordenes: p.ordenes.length }; });
+    const registered = (statsData.registered || []).filter(r => r.active);
+    let pool = registered.map(r => ({ code: r.code, name: r.name, tickets: salesMap[r.code]?.tickets || 0, ordenes: salesMap[r.code]?.ordenes || 0 }))
+                         .sort((a, b) => b.tickets - a.tickets);
+    if (!pool.length) pool = (statsData.promotores || []).map(p => ({ code: p.code, name: promotorName(p.code), tickets: p.tickets, ordenes: p.ordenes.length }));
+    if (filtroR) pool = pool.filter(p => p.code === filtroR);
+    if (!pool.length) {
       document.getElementById('table-resumen').innerHTML =
         `<tr><td colspan="5"><div class="empty-state">Sin ventas registradas aún.</div></td></tr>`;
       return;
     }
-    const total = promotores.reduce((s, p) => s + p.tickets, 0);
-    const max = promotores[0].tickets;
+    const total = pool.reduce((s, p) => s + p.tickets, 0);
+    const max = pool[0].tickets || 1;
     const rankClass = ['rank-1','rank-2','rank-3','rank-other','rank-other'];
 
-    document.getElementById('table-resumen').innerHTML = promotores.slice(0, 25).map((p, i) => {
+    document.getElementById('table-resumen').innerHTML = pool.slice(0, 25).map((p, i) => {
       const pct = total ? Math.round((p.tickets / total) * 100) : 0;
       const barW = max ? Math.round((p.tickets / max) * 100) : 0;
       return `<tr>
@@ -1076,7 +1103,7 @@
           <div class="avatar">${initials(p.code)}</div>${promotorName(p.code)}
         </div></td>
         <td style="font-weight:700;">${p.tickets}</td>
-        <td style="color:#777;">${p.ordenes.length}</td>
+        <td style="color:#777;">${typeof p.ordenes === 'number' ? p.ordenes : p.ordenes.length}</td>
         <td style="min-width:140px;">
           <div class="bar-bg"><div class="bar-fill" style="width:${barW}%"></div></div>
           <p class="pct">${pct}% del total</p>
@@ -1260,14 +1287,29 @@
   }
 
   function buildFilter() {
+    // Órdenes filter
     const sel = document.getElementById('filter-promotor');
     sel.innerHTML = '<option value="">Todos</option><option value="__directo__">Sin promotor</option>';
-    statsData.promotores.forEach(p => {
+    const allCodes = new Set();
+    (statsData.registered || []).forEach(p => allCodes.add(p.code));
+    statsData.promotores.forEach(p => allCodes.add(p.code));
+    allCodes.forEach(code => {
       const o = document.createElement('option');
-      o.value = p.code;
-      o.textContent = promotorName(p.code);
+      o.value = code;
+      o.textContent = promotorName(code);
       sel.appendChild(o);
     });
+    // Resumen filter
+    const selR = document.getElementById('filter-resumen');
+    if (selR) {
+      selR.innerHTML = '<option value="">Todos</option>';
+      allCodes.forEach(code => {
+        const o = document.createElement('option');
+        o.value = code;
+        o.textContent = promotorName(code);
+        selR.appendChild(o);
+      });
+    }
   }
 
   function renderOrdenes() {
@@ -1316,6 +1358,16 @@
       .replace(/\s+/g, '-');
   }
 
+  function autoCode(name) {
+    const parts = name.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/[^a-z\s]/g, '').trim().split(/\s+/);
+    const initials = parts.map(w => w[0] || '').join('').slice(0, 3);
+    const existingCodes = (statsData.registered || []).map(r => r.code);
+    let n = 1;
+    while (existingCodes.includes(initials + n) && n < 99) n++;
+    return (initials + n).slice(0, 5);
+  }
+
   function regInitials(code) {
     return (code || '').split('-').slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '??';
   }
@@ -1323,32 +1375,25 @@
   function previewCode() {
     const val = document.getElementById('new-promotor-name').value;
     const el = document.getElementById('code-preview');
-    if (!val.trim()) { el.innerHTML = ''; return; }
-    const code = toCode(val);
-    el.innerHTML = `Código: <span>${code}</span> · Link: <span>${SITE_BASE}?pr=${code}</span>`;
+    if (!val.trim() || val.trim().split(/\s+/).length < 2) { el.innerHTML = ''; return; }
+    const code = autoCode(val);
+    el.innerHTML = `Código auto: <span>${code}</span> · Link: <span>${SITE_BASE}?pr=${code}</span>`;
   }
 
   async function addPromotor() {
     const input = document.getElementById('new-promotor-name');
-    const passInput = document.getElementById('new-promotor-pass');
     const name = input.value.trim();
-    const password = passInput.value.trim();
     if (!name || name.split(/\s+/).length < 2) {
       input.style.borderColor = '#c5282a';
       setTimeout(() => input.style.borderColor = '', 1200);
       return;
     }
-    if (!password) {
-      passInput.style.borderColor = '#c5282a';
-      setTimeout(() => passInput.style.borderColor = '', 1200);
-      return;
-    }
-    const code = toCode(name);
+    const code = autoCode(name);
     try {
       const res = await fetch('/api/promotores/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-promoter-key': sessionKey },
-        body: JSON.stringify({ name, code, password })
+        body: JSON.stringify({ name, code, password: code })
       });
       const data = await res.json();
       if (data.ok === false && data.reason === 'already_exists') {
@@ -1357,7 +1402,6 @@
         return;
       }
       input.value = '';
-      passInput.value = '';
       document.getElementById('code-preview').innerHTML = '';
       await loadGestion();
     } catch (e) { console.error('Error registrando promotor', e); }

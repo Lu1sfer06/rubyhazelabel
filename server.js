@@ -592,6 +592,7 @@ async function payphoneConfirmWithRetries(payload, maxAttempts = 4) {
   throw lastErr;
 }
 
+app.get(['/promotor', '/promotor.html', '/promotores.html', '/promotores-preview.html'], (req, res) => res.status(404).end());
 app.use(express.static(__dirname, { extensions: ['html'] }));
 app.use(express.json());
 
@@ -645,9 +646,11 @@ app.post('/api/tickets/intent', purchaseLimiter, (req, res) => {
     return res.status(400).json({ ok: false });
   }
   cleanupPendingPurchases();
+  const rawCode = String(promotorCode || '').trim().toLowerCase();
+  const validCode = promotoresDB.find(p => p.active && p.code === rawCode) ? rawCode : '';
   pendingPurchases.set(clientTransactionId, {
     cardholderName: String(cardholderName).trim(),
-    promotorCode: String(promotorCode || '').trim().toLowerCase(),
+    promotorCode: validCode,
     createdAt: Date.now()
   });
   savePendingPurchases();
@@ -1150,11 +1153,11 @@ app.get('/api/promotores/registered', requireAdminKey, (req, res) => {
 // Registrar un nuevo promotor (admin).
 app.post('/api/promotores/register', requireAdminKey, (req, res) => {
   const { name, code, password } = req.body || {};
-  if (!name || !code || !password) return res.status(400).json({ error: 'Faltan name, code o password.' });
+  if (!name || !code) return res.status(400).json({ error: 'Faltan name o code.' });
   const clean = code.trim().toLowerCase();
   if (promotoresDB.find(p => p.code === clean))
     return res.json({ ok: false, reason: 'already_exists' });
-  promotoresDB.push({ name: name.trim(), code: clean, active: true, password: password.trim() });
+  promotoresDB.push({ name: name.trim(), code: clean, active: true, password: (password || '').trim() });
   savePromotoresDB();
   res.json({ ok: true });
 });

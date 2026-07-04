@@ -307,13 +307,13 @@
   <span class="rh-logo">Ruby Haze</span>
   <span class="event-tag">The Tribe PT.II</span>
   <h1>Promotores Room</h1>
-  <p class="sub">Ingresa tu nombre completo y la clave<br>que te compartió el equipo.</p>
+  <p class="sub">Ingresa tu nombre completo y tu código<br>de promotor (ej: jc1).</p>
 
   <div class="field">
     <input type="text" id="inp-nombre" placeholder="Nombre y apellido" autocomplete="off" autocapitalize="words">
   </div>
   <div class="field">
-    <input type="password" id="inp-pass" placeholder="Clave de promotor" autocomplete="off">
+    <input type="text" id="inp-pass" placeholder="Tu código (ej: jc1)" autocomplete="off" autocapitalize="none" style="text-transform:lowercase;">
   </div>
   <button class="btn-enter" id="btn-enter" onclick="doLogin()">Ingresar</button>
   <p class="err" id="login-err">Completa todos los campos.</p>
@@ -436,30 +436,28 @@
     errEl.classList.remove('on');
     btn.disabled=true; btn.textContent='Verificando...';
 
-    const code = toCode(nombreCompleto);
+    const inputCode = pass.toLowerCase().replace(/\s+/g,'');
     const fullName = cap(nombreCompleto);
 
-    if(pass==='demo'){
-      isDemoMode=true; myCode=code; myFullName=fullName;
+    if(inputCode==='demo'){
+      isDemoMode=true; myCode='demo'; myFullName=fullName;
       document.getElementById('login-screen').style.display='none';
       document.getElementById('dashboard').style.display='block';
       document.getElementById('my-name-display').textContent=myFullName;
       document.getElementById('demo-badge').style.display='inline-block';
-      // Reemplaza la posición 3 del demo con el usuario real para que el
-      // highlight funcione independientemente del nombre que se escriba.
       const demoData = JSON.parse(JSON.stringify(DEMO_DATA));
-      demoData.top5[2] = { ...demoData.top5[2], code, fullName };
-      demoData.ranking[2] = { ...demoData.ranking[2], code, fullName };
-      demoData.myStats = { ...demoData.myStats, code };
-      renderDashboard(demoData, myCode);
+      demoData.top5[2] = { ...demoData.top5[2], code:'demo', fullName };
+      demoData.ranking[2] = { ...demoData.ranking[2], code:'demo', fullName };
+      demoData.myStats = { ...demoData.myStats, code:'demo' };
+      renderDashboard(demoData, 'demo');
       btn.disabled=false; btn.textContent='Ingresar';
       return;
     }
 
     try{
-      const res = await fetch(`/api/promotores/ranking?me=${encodeURIComponent(code)}`,{headers:{'x-promoter-key':pass}});
+      const res = await fetch(`/api/promotores/ranking?me=${encodeURIComponent(inputCode)}`,{headers:{'x-promoter-key':inputCode}});
       if(res.status===401){
-        errEl.textContent='Clave incorrecta. Intenta de nuevo.';
+        errEl.textContent='Código incorrecto. Verifica tu código de promotor.';
         errEl.classList.add('on'); btn.disabled=false; btn.textContent='Ingresar'; return;
       }
       if(res.status===403){
@@ -470,7 +468,7 @@
         errEl.classList.add('on'); btn.disabled=false; btn.textContent='Ingresar'; return;
       }
       const data = await res.json();
-      myCode=code; myKey=pass; myFullName=fullName; isDemoMode=false;
+      myCode=inputCode; myKey=inputCode; myFullName=fullName; isDemoMode=false;
       document.getElementById('login-screen').style.display='none';
       document.getElementById('dashboard').style.display='block';
       document.getElementById('my-name-display').textContent=myFullName;
