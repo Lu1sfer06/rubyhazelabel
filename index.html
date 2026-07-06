@@ -833,6 +833,35 @@
     }
   }
 
+  .merch-contact{
+    margin-top: 36px;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.4);
+  }
+  .merch-wa-row{
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .merch-wa-btn{
+    display: inline-block;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    transition: border-color 0.25s, color 0.25s;
+  }
+  .merch-wa-btn:hover{ border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); }
+
   .merch-item h3{
     margin-top: 16px;
     font-size: 1rem;
@@ -1564,8 +1593,18 @@
         <h3><span class="sold-out-title">Merch 002</span><span class="sold-out-tag">Sold Out</span></h3>
       </div>
       <div class="merch-item">
-        <div class="placeholder coming-soon"><img src="eventos/Tezza-5904.jpeg" alt="Merch 003"><span class="coming-soon-text">Available Soon</span></div>
+        <div class="placeholder">
+          <img src="eventos/Tezza-5904.jpeg" alt="Merch 003">
+          <a href="https://drive.google.com/file/d/18sTJVocdXV_t96eJ73DK1Txk5mWtnwct/view?usp=sharing" target="_blank" rel="noopener" class="catalog-strip">Ver Catálogo</a>
+        </div>
         <h3>Merch 003</h3>
+      </div>
+    </div>
+    <div class="merch-contact">
+      Para adquirir merch disponible, contáctanos:
+      <div class="merch-wa-row">
+        <a href="https://wa.me/593978820979" target="_blank" rel="noopener" class="merch-wa-btn">WhatsApp 1</a>
+        <a href="https://wa.me/593986945986" target="_blank" rel="noopener" class="merch-wa-btn">WhatsApp 2</a>
       </div>
     </div>
   </div>
