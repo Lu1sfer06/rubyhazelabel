@@ -1359,12 +1359,16 @@
   }
 
   function autoCode(name) {
-    const base = toCode(name);
+    const parts = name.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/[^a-z\s]/g, '').trim().split(/\s+/);
+    const first = parts[0] || '';
+    const lastInitial = (parts[parts.length - 1] || '')[0] || '';
+    const base = first + (lastInitial ? '-' + lastInitial : '');
     const existingCodes = (statsData.registered || []).map(r => r.code);
     if (!existingCodes.includes(base)) return base;
     let n = 2;
-    while (existingCodes.includes(base + '-' + n) && n < 99) n++;
-    return base + '-' + n;
+    while (existingCodes.includes(base + n) && n < 99) n++;
+    return base + n;
   }
 
   function regInitials(code) {
