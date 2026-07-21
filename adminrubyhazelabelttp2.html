@@ -1592,6 +1592,8 @@
         ? `<button class="tk-act tk-toggle-on" onclick="tkDeactivate('${code}')">● Activo</button>`
         : `<button class="tk-act tk-toggle-off" onclick="tkActivate('${code}')">● Inactivo</button>`;
       const btnDel = `<button class="tk-act tk-danger" onclick="tkDelete('${code}',this)">Borrar</button>`;
+      const promoLabel = t.promotorCode ? t.promotorCode : 'Sin promotora';
+      const btnPromo = `<button class="tk-act" onclick="tkAssignPromo('${code}','${(t.promotorCode || '').replace(/'/g, "\\'")}')">${promoLabel}</button>`;
 
       if (tab === 'ind') {
         return `<tr${dim}>
@@ -1600,7 +1602,7 @@
           <td data-label="Cédula" style="color:#555;">${doc}</td>
           <td data-label="Estado">${status}</td>
           <td data-label="Fecha" style="color:#444;font-size:0.7rem;white-space:nowrap;">${date}</td>
-          <td class="tk-acts-cell"><div class="tk-acts">${btnToggle}${btnDel}</div></td>
+          <td class="tk-acts-cell"><div class="tk-acts">${btnToggle}${btnPromo}${btnDel}</div></td>
         </tr>`;
       }
 
@@ -1617,7 +1619,7 @@
           <td data-label="Válidos">${setCtrl}</td>
           <td data-label="Estado">${status}</td>
           <td data-label="Fecha" style="color:#444;font-size:0.7rem;white-space:nowrap;">${date}</td>
-          <td class="tk-acts-cell"><div class="tk-acts">${btnToggle}${btnDel}</div></td>
+          <td class="tk-acts-cell"><div class="tk-acts">${btnToggle}${btnPromo}${btnDel}</div></td>
         </tr>`;
       }
 
@@ -1693,6 +1695,25 @@
         headers: { 'Content-Type': 'application/json', 'x-scan-key': tkKey },
         body: JSON.stringify({ code })
       });
+      await tkLoadData();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  // Reasigna a mano la promotora de una venta (ej. la compradora pagó
+  // online pero olvidó usar el link de su promotora). Deja vacío para quitarla.
+  async function tkAssignPromo(code, current) {
+    const input = prompt('Código de la promotora para ' + code + ' (ej. jasna-c). Dejar vacío para quitarla:', current || '');
+    if (input === null) return;
+    try {
+      const r = await fetch('/api/tickets/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-scan-key': tkKey },
+        body: JSON.stringify({ code, promotorCode: input.trim() })
+      });
+      const d = await r.json();
+      if (input.trim() && d.ticket && d.ticket.promotorCode !== input.trim().toLowerCase()) {
+        alert('Código de promotora no reconocido — revisa que esté bien escrito y activa.');
+      }
       await tkLoadData();
     } catch (e) { alert('Error: ' + e.message); }
   }
