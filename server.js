@@ -1301,6 +1301,18 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Sin esto, un error no controlado en cualquier punto (ej. una promesa
+// rechazada que nadie atrapó) tumba TODO el proceso — cortando de golpe
+// compras y escaneos en curso — en vez de quedar solo como un error de esa
+// petición puntual. Se registra para poder diagnosticar, pero el servidor
+// sigue en pie.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('unhandledRejection:', err);
+});
+
 app.listen(PORT, () => {
   console.log(`Ruby Haze running on port ${PORT}`);
 });
