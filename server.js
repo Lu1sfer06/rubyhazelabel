@@ -864,7 +864,7 @@ app.post('/api/tickets/delete', requireScanKey, (req, res) => {
 // existente (ej. el nombre no se guardó por un corte justo al pagar). No
 // toca listNumber ni el estado de aprobación.
 app.post('/api/tickets/edit', requireScanKey, (req, res) => {
-  const { code, transactionId, cardholderName, document, email, phoneNumber } = req.body || {};
+  const { code, transactionId, cardholderName, document, email, phoneNumber, promotorCode } = req.body || {};
   const ticketCode = (code || (transactionId ? `RH-${transactionId}` : '')).trim();
   if (!ticketCode) {
     return res.status(400).json({ error: 'Falta code o transactionId.' });
@@ -877,6 +877,13 @@ app.post('/api/tickets/edit', requireScanKey, (req, res) => {
   if (document !== undefined) ticket.document = document;
   if (email !== undefined) ticket.email = email;
   if (phoneNumber !== undefined) ticket.phoneNumber = phoneNumber;
+  // Para reasignar a mano una venta a una promotora cuando la compradora
+  // pagó online pero se olvidó de usar el link de la promotora al pagar.
+  if (promotorCode !== undefined) {
+    const rawCode = String(promotorCode).trim().toLowerCase();
+    const validCode = promotoresDB.find(p => p.active && p.code === rawCode) ? rawCode : '';
+    ticket.promotorCode = validCode;
+  }
   saveIssuedTickets();
   res.json({ edited: true, ticketCode, ticket });
 });
