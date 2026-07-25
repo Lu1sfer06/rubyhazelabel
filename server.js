@@ -7,6 +7,7 @@ const { Resend } = require('resend');
 const QRCode = require('qrcode');
 const sharp = require('sharp');
 const rateLimit = require('express-rate-limit');
+const webpush = require('web-push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -198,7 +199,98 @@ function registerIssuedTicket(code, { transactionId, cardholderName, document, q
     usedAt: null
   };
   saveIssuedTickets();
+  // Aviso push al celular del admin — SOLO tickets pagados (los de cortesía
+  // RH-MANUAL los crea el admin a mano, no necesitan aviso). Fire-and-forget:
+  // nunca debe bloquear ni romper el registro del ticket.
+  if (!isGuest) {
+    notifyNewTicket({ cardholderName, quantity, listNumber }).catch(() => {});
+  }
   return listNumber;
+}
+
+// ── NOTIFICACIONES PUSH (Web Push / VAPID) ─────────────────────────────────
+// Avisan al celular del admin cada vez que entra un ticket pagado nuevo,
+// incluso con la app cerrada (PWA instalada en iOS 16.4+ / Android). Las
+// llaves VAPID y las suscripciones se guardan en el MISMO volumen persistente
+// que los tickets (TICKETS_DB_DIR) para sobrevivir a los redeploys de Railway.
+const VAPID_PATH = path.join(TICKETS_DB_DIR, 'vapid.json');
+const PUSH_SUBS_PATH = path.join(TICKETS_DB_DIR, 'push-subs.json');
+const VAPID_SUBJECT = (process.env.VAPID_SUBJECT || 'mailto:maison@rubyhazelabel.com').trim();
+
+// Prioriza variables de entorno si existen; si no, usa/crea vapid.json en el
+// volumen. Así no hay que configurar nada a mano en Railway: la primera vez
+// que arranca genera las llaves y las guarda.
+function loadOrCreateVapid() {
+  const envPub = (process.env.VAPID_PUBLIC || '').trim();
+  const envPriv = (process.env.VAPID_PRIVATE || '').trim();
+  if (envPub && envPriv) return { publicKey: envPub, privateKey: envPriv };
+  try {
+    return JSON.parse(fs.readFileSync(VAPID_PATH, 'utf8'));
+  } catch {
+    const keys = webpush.generateVAPIDKeys();
+    try { fs.writeFileSync(VAPID_PATH, JSON.stringify(keys, null, 2)); }
+    catch (e) { console.error('No se pudo guardar vapid.json:', e); }
+    return keys;
+  }
+}
+
+const vapidKeys = loadOrCreateVapid();
+webpush.setVapidDetails(VAPID_SUBJECT, vapidKeys.publicKey, vapidKeys.privateKey);
+
+let pushSubs = (() => {
+  try { return JSON.parse(fs.readFileSync(PUSH_SUBS_PATH, 'utf8')); }
+  catch { return []; }
+})();
+
+function savePushSubs() {
+  fs.writeFile(PUSH_SUBS_PATH, JSON.stringify(pushSubs, null, 2), (err) => {
+    if (err) console.error('Error guardando push-subs.json:', err);
+  });
+}
+
+function addPushSub(sub) {
+  if (!sub || !sub.endpoint) return;
+  if (pushSubs.some(s => s.endpoint === sub.endpoint)) return;
+  pushSubs.push(sub);
+  savePushSubs();
+}
+
+function removePushSub(endpoint) {
+  const before = pushSubs.length;
+  pushSubs = pushSubs.filter(s => s.endpoint !== endpoint);
+  if (pushSubs.length !== before) savePushSubs();
+}
+
+// Envía a todos los dispositivos suscritos. Poda las suscripciones muertas
+// (404/410 = el navegador ya no existe / permiso revocado) para que la lista
+// no se llene de basura.
+async function sendPushToAll(payload) {
+  if (!pushSubs.length) return;
+  const data = JSON.stringify(payload);
+  const dead = [];
+  await Promise.all(pushSubs.map(sub =>
+    webpush.sendNotification(sub, data).catch(err => {
+      const code = err && err.statusCode;
+      if (code === 404 || code === 410) dead.push(sub.endpoint);
+      else console.error('Error enviando push:', code || (err && err.message));
+    })
+  ));
+  if (dead.length) {
+    pushSubs = pushSubs.filter(s => !dead.includes(s.endpoint));
+    savePushSubs();
+  }
+}
+
+function notifyNewTicket({ cardholderName, quantity, listNumber }) {
+  const name = (cardholderName || '').trim() || 'Sin nombre';
+  const qty = quantity > 1 ? `${quantity} entradas` : '1 entrada';
+  const numTxt = listNumber ? ` · #${listNumber}` : '';
+  return sendPushToAll({
+    title: 'Nuevo ticket vendido',
+    body: `${name} — ${qty}${numTxt}`,
+    url: '/adminrubyhazelabelttp2',
+    tag: 'nuevo-ticket'
+  });
 }
 
 // Tickets de grupo (quantity > 1) pueden entrar por partes: cada aprobación
@@ -1295,6 +1387,39 @@ app.get('/api/admin/event-day', requireAdminKey, (req, res) => {
     .slice(0, 30)
     .map(t => ({ name: t.cardholderName || '—', usedAt: t.usedAt, listNumber: t.listNumber, quantity: t.quantity || 1 }));
   res.json({ totalTickets, entered, byHour, recent });
+});
+
+// ── Rutas de notificaciones push (todas requieren la clave de admin) ──
+// Devuelve la llave pública VAPID para que el navegador pueda suscribirse.
+app.get('/api/push/public-key', requireAdminKey, (req, res) => {
+  res.json({ key: vapidKeys.publicKey });
+});
+
+// Guarda la suscripción del dispositivo (el objeto que produce pushManager.subscribe).
+app.post('/api/push/subscribe', requireAdminKey, (req, res) => {
+  const sub = req.body;
+  if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Suscripción inválida.' });
+  addPushSub(sub);
+  res.json({ ok: true });
+});
+
+// Quita una suscripción (al desactivar avisos en un dispositivo).
+app.post('/api/push/unsubscribe', requireAdminKey, (req, res) => {
+  const endpoint = (req.body && req.body.endpoint) || '';
+  if (endpoint) removePushSub(endpoint);
+  res.json({ ok: true });
+});
+
+// Envía un push de prueba a todos los dispositivos suscritos (para confirmar
+// que quedó bien configurado tras tocar "Activar avisos").
+app.post('/api/push/test', requireAdminKey, async (req, res) => {
+  await sendPushToAll({
+    title: 'Avisos activados',
+    body: 'Te avisaremos aquí cada vez que se venda un ticket.',
+    url: '/adminrubyhazelabelttp2',
+    tag: 'prueba'
+  });
+  res.json({ ok: true, subs: pushSubs.length });
 });
 
 app.get('*', (req, res) => {

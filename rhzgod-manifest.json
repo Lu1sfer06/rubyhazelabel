@@ -1,10 +1,10 @@
 {
-  "name": "RHZGOD",
-  "short_name": "RHZGOD",
+  "name": "RHZ BRAIN",
+  "short_name": "RHZ BRAIN",
   "start_url": "/adminrubyhazelabelttp2",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#c5282a",
+  "background_color": "#050505",
+  "theme_color": "#050505",
   "icons": [
     {
       "src": "/assets/rhzgod-icon.png",
