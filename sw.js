@@ -14,8 +14,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'RHZ BRAIN';
   const options = {
     body: data.body || '',
-    icon: '/assets/rhzgod-icon.png',
-    badge: '/assets/rhzgod-icon.png',
+    icon: '/assets/rhz-brain-icon.png',
+    badge: '/assets/rhz-brain-icon.png',
     tag: data.tag || 'rhz',
     renotify: true,
     data: { url: data.url || '/adminrubyhazelabelttp2' }

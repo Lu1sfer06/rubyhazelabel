@@ -7,10 +7,16 @@
   "theme_color": "#050505",
   "icons": [
     {
-      "src": "/assets/rhzgod-icon.png",
-      "sizes": "180x180",
+      "src": "/assets/rhz-brain-icon.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/rhz-brain-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
