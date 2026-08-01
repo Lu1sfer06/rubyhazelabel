@@ -889,6 +889,7 @@
       <div class="tk-tab-panel active" id="tkt-ind">
         <div class="tk-toolbar">
           <input class="tk-search" type="text" placeholder="Nombre, código o cédula..." oninput="tkSearch('ind',this.value)">
+          <button class="btn-tk-add" onclick="tkOpenSaleModal()">+ Agregar venta</button>
           <span class="tk-count" id="tk-count-ind"></span>
         </div>
         <div class="tk-table-wrap">
@@ -908,6 +909,7 @@
       <div class="tk-tab-panel" id="tkt-grp">
         <div class="tk-toolbar">
           <input class="tk-search" type="text" placeholder="Nombre, código o cédula..." oninput="tkSearch('grp',this.value)">
+          <button class="btn-tk-add" onclick="tkOpenSaleModal()">+ Agregar venta</button>
           <span class="tk-count" id="tk-count-grp"></span>
         </div>
         <div class="tk-table-wrap">
@@ -968,6 +970,39 @@
     <div class="tk-modal-acts">
       <button class="btn-tk-modal-cancel" onclick="tkCloseModal()">Cancelar</button>
       <button class="btn-tk-modal-ok" id="tk-modal-ok" onclick="tkSubmitModal()">Crear y enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AGREGAR VENTA MANUAL (efectivo/transferencia) -->
+<div class="tk-modal-overlay" id="tk-sale-modal-overlay" onclick="if(event.target===this)tkCloseSaleModal()">
+  <div class="tk-modal">
+    <p class="tk-modal-title">Agregar venta manual</p>
+    <p style="color:#666;font-size:12px;margin:-6px 0 12px;">Para ventas pagadas fuera de la página (efectivo/transferencia). Queda como venta real: numerada en Individuales/Grupos, en el Sheet de ventas, y el comprador recibe el ticket normal por correo (no dice "invitado").</p>
+    <div class="tk-mfield">
+      <label>Nombre completo *</label>
+      <input type="text" id="tk-s-name" placeholder="Nombre Apellido" onkeydown="if(event.key==='Enter')document.getElementById('tk-s-qty').focus()">
+    </div>
+    <div class="tk-mfield">
+      <label>Cantidad de entradas *</label>
+      <input type="number" id="tk-s-qty" min="1" value="1" onkeydown="if(event.key==='Enter')document.getElementById('tk-s-email').focus()">
+    </div>
+    <div class="tk-mfield">
+      <label>Correo electrónico <span style="color:#555;font-weight:400;">(se le envía el ticket con QR)</span></label>
+      <input type="email" id="tk-s-email" placeholder="correo@ejemplo.com" onkeydown="if(event.key==='Enter')document.getElementById('tk-s-doc').focus()">
+    </div>
+    <div class="tk-mfield">
+      <label>Cédula <span style="color:#555;font-weight:400;">(opcional)</span></label>
+      <input type="text" id="tk-s-doc" placeholder="Cédula" onkeydown="if(event.key==='Enter')document.getElementById('tk-s-phone').focus()">
+    </div>
+    <div class="tk-mfield">
+      <label>Teléfono <span style="color:#555;font-weight:400;">(opcional)</span></label>
+      <input type="text" id="tk-s-phone" placeholder="09xxxxxxxx" onkeydown="if(event.key==='Enter')tkSubmitSaleModal()">
+    </div>
+    <p class="tk-modal-err" id="tk-sale-modal-err"></p>
+    <div class="tk-modal-acts">
+      <button class="btn-tk-modal-cancel" onclick="tkCloseSaleModal()">Cancelar</button>
+      <button class="btn-tk-modal-ok" id="tk-sale-modal-ok" onclick="tkSubmitSaleModal()">Crear y enviar</button>
     </div>
   </div>
 </div>
@@ -1969,6 +2004,52 @@
       const d = await r.json();
       if (!r.ok) { errEl.textContent = d.error || 'Error al crear.'; return; }
       tkCloseModal();
+      await tkLoadData();
+    } catch (e) {
+      errEl.textContent = 'Error de red.';
+    } finally {
+      okBtn.disabled = false; okBtn.textContent = 'Crear y enviar';
+    }
+  }
+
+  /* ── MODAL: AGREGAR VENTA MANUAL ── */
+  function tkOpenSaleModal() {
+    document.getElementById('tk-sale-modal-err').textContent = '';
+    ['tk-s-name','tk-s-email','tk-s-doc','tk-s-phone'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById('tk-s-qty').value = '1';
+    document.getElementById('tk-sale-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('tk-s-name').focus(), 80);
+  }
+
+  function tkCloseSaleModal() {
+    document.getElementById('tk-sale-modal-overlay').classList.remove('open');
+  }
+
+  async function tkSubmitSaleModal() {
+    const cardholderName = document.getElementById('tk-s-name').value.trim();
+    const quantity = document.getElementById('tk-s-qty').value;
+    const email = document.getElementById('tk-s-email').value.trim();
+    const document_ = document.getElementById('tk-s-doc').value.trim();
+    const phoneNumber = document.getElementById('tk-s-phone').value.trim();
+    const errEl = document.getElementById('tk-sale-modal-err');
+
+    if (!cardholderName) { errEl.textContent = 'El nombre es obligatorio.'; return; }
+    if (!quantity || parseInt(quantity, 10) < 1) { errEl.textContent = 'La cantidad debe ser al menos 1.'; return; }
+    errEl.textContent = '';
+
+    const okBtn = document.getElementById('tk-sale-modal-ok');
+    okBtn.disabled = true; okBtn.textContent = 'Creando…';
+    try {
+      const r = await fetch('/api/tickets/create-paid-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-scan-key': tkKey },
+        body: JSON.stringify({ cardholderName, quantity, email, document: document_, phoneNumber })
+      });
+      const d = await r.json();
+      if (!r.ok) { errEl.textContent = d.error || 'Error al crear.'; return; }
+      tkCloseSaleModal();
       await tkLoadData();
     } catch (e) {
       errEl.textContent = 'Error de red.';

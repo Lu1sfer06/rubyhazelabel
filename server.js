@@ -1088,6 +1088,46 @@ app.post('/api/tickets/create-manual', requireScanKey, async (req, res) => {
   });
 });
 
+// Venta real hecha fuera de Payphone (efectivo/transferencia), registrada
+// a mano por el admin. A diferencia de create-manual (cortesía/invitado),
+// esto SÍ debe verse y comportarse igual que una compra por Payphone: el
+// código NO lleva el prefijo RH-MANUAL (así isGuest da false), entra en el
+// mismo numerado real de Individuales/Grupos, se sincroniza al Sheet de
+// ventas y el comprador recibe el correo normal de ticket (no el de
+// cortesía). El transactionId queda marcado como "manual" solo para
+// que el admin pueda distinguir el origen si hace falta, sin afectar
+// ninguna otra lógica.
+app.post('/api/tickets/create-paid-manual', requireScanKey, async (req, res) => {
+  const { cardholderName, document, quantity, email, phoneNumber } = req.body || {};
+  if (!cardholderName) {
+    return res.status(400).json({ error: 'Falta cardholderName.' });
+  }
+  const qty = Math.max(1, parseInt(quantity, 10) || 1);
+  const ticketCode = `RH-VENTAMANUAL${Date.now()}`;
+  const listNumber = registerIssuedTicket(ticketCode, {
+    transactionId: `MANUAL-PAGO-${Date.now()}`,
+    cardholderName,
+    document: document || '',
+    quantity: qty,
+    email: email || '',
+    phoneNumber: phoneNumber || ''
+  });
+
+  syncToSheet(issuedTickets[ticketCode]);
+
+  if (email) {
+    sendTicketEmail({ email, cardholderName, quantity: qty, ticketCode })
+      .catch((err) => console.error('Error enviando ticket de venta manual:', err));
+  }
+
+  res.json({
+    created: true,
+    ticketCode,
+    listNumber,
+    qrUrl: `https://rubyhazemusic.com/api/tickets/qr/${encodeURIComponent(ticketCode)}`
+  });
+});
+
 // Para invitados que se crean sin correo todavía (solo nombre, ya válidos
 // para escanear) y luego sí lo mandan: envía el ticket YA EXISTENTE a ese
 // correo, en vez de crear uno nuevo con otro código/QR.
