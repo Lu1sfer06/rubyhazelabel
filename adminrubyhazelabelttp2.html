@@ -2065,7 +2065,12 @@
   // Ver la lista de invitados no pide clave (ya estás en la sesión del
   // admin), pero agregar uno nuevo sí — la misma clave de tickets/escáner,
   // como pidió el usuario, a modo de confirmación extra antes de escribir.
+  // Solo se pide una vez por sesión (igual que Gestión o Tickets) — se
+  // vuelve a pedir recién si recargas o cierras la página.
+  let tkInvGateVerified = false;
+
   function tkGateOpenModal() {
+    if (tkInvGateVerified) { tkOpenModal(); return; }
     document.getElementById('tk-invgate-err').textContent = '';
     document.getElementById('tk-invgate-input').value = '';
     document.getElementById('tk-invgate-overlay').classList.add('open');
@@ -2085,6 +2090,7 @@
     try {
       const r = await fetch('/api/tickets/list', { headers: { 'x-scan-key': key } });
       if (!r.ok) { errEl.textContent = 'Clave incorrecta.'; return; }
+      tkInvGateVerified = true;
       tkCloseGateModal();
       tkOpenModal();
     } catch (e) {
