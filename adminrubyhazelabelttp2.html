@@ -974,6 +974,22 @@
   </div>
 </div>
 
+<!-- MODAL: ASIGNAR PROMOTOR A UNA VENTA -->
+<div class="tk-modal-overlay" id="tk-promo-modal-overlay" onclick="if(event.target===this)tkClosePromoModal()">
+  <div class="tk-modal">
+    <p class="tk-modal-title">Asignar promotor</p>
+    <div class="tk-mfield">
+      <label>Código de promotor <span style="color:#555;font-weight:400;">(vacío para quitarlo)</span></label>
+      <input type="text" id="tk-promo-input" placeholder="Ej. jasna-c" onkeydown="if(event.key==='Enter')tkSubmitPromoModal()">
+    </div>
+    <p class="tk-modal-err" id="tk-promo-modal-err"></p>
+    <div class="tk-modal-acts">
+      <button class="btn-tk-modal-cancel" onclick="tkClosePromoModal()">Cancelar</button>
+      <button class="btn-tk-modal-ok" id="tk-promo-modal-ok" onclick="tkSubmitPromoModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: AGREGAR VENTA MANUAL (efectivo/transferencia) -->
 <div class="tk-modal-overlay" id="tk-sale-modal-overlay" onclick="if(event.target===this)tkCloseSaleModal()">
   <div class="tk-modal">
@@ -1932,21 +1948,45 @@
 
   // Reasigna a mano la promotora de una venta (ej. la compradora pagó
   // online pero olvidó usar el link de su promotora). Deja vacío para quitarla.
-  async function tkAssignPromo(code, current) {
-    const input = prompt('Código de la promotora para ' + code + ' (ej. jasna-c). Dejar vacío para quitarla:', current || '');
-    if (input === null) return;
+  // Usa un modal propio (no window.prompt): en iPhone, dentro de la app
+  // instalada en pantalla de inicio (PWA), prompt() puede no aparecer y
+  // fallar en silencio sin guardar nada ni mostrar ningún error.
+  let tkPromoCode = '';
+  function tkAssignPromo(code, current) {
+    tkPromoCode = code;
+    document.getElementById('tk-promo-input').value = current || '';
+    document.getElementById('tk-promo-modal-err').textContent = '';
+    document.getElementById('tk-promo-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('tk-promo-input').focus(), 80);
+  }
+
+  function tkClosePromoModal() {
+    document.getElementById('tk-promo-modal-overlay').classList.remove('open');
+  }
+
+  async function tkSubmitPromoModal() {
+    const input = document.getElementById('tk-promo-input').value.trim();
+    const errEl = document.getElementById('tk-promo-modal-err');
+    const okBtn = document.getElementById('tk-promo-modal-ok');
+    okBtn.disabled = true; okBtn.textContent = 'Guardando…';
     try {
       const r = await fetch('/api/tickets/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-scan-key': tkKey },
-        body: JSON.stringify({ code, promotorCode: input.trim() })
+        body: JSON.stringify({ code: tkPromoCode, promotorCode: input })
       });
       const d = await r.json();
-      if (input.trim() && d.ticket && d.ticket.promotorCode !== input.trim().toLowerCase()) {
-        alert('Código de promotora no reconocido — revisa que esté bien escrito y activa.');
+      if (input && d.ticket && d.ticket.promotorCode !== input.toLowerCase()) {
+        errEl.textContent = 'Código no reconocido — revisa que esté bien escrito y activo.';
+        return;
       }
+      tkClosePromoModal();
       await tkLoadData();
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e) {
+      errEl.textContent = 'Error de red.';
+    } finally {
+      okBtn.disabled = false; okBtn.textContent = 'Guardar';
+    }
   }
 
   function tkDelete(code, btn) {
