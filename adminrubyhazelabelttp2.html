@@ -932,8 +932,14 @@
   <!-- TAB: INVITADOS — solo visual, sin clave aparte (ya estás en la sesión
        del admin); aparte de Órdenes de compra para que no se mezclen. -->
   <div class="tab-panel" id="tab-invitados">
+    <div class="summary-cards">
+      <div class="card accent">
+        <p class="card-label">Invitados en lista</p>
+        <p class="card-value" id="inv-total-count">—</p>
+      </div>
+    </div>
     <div class="filter-row">
-      <button class="btn-tk-add" onclick="tkOpenModal()">+ Agregar invitado</button>
+      <button class="btn-tk-add" onclick="tkGateOpenModal()">+ Agregar invitado</button>
     </div>
     <div class="table-wrap">
       <p class="table-title">
@@ -952,6 +958,22 @@
   </div><!-- /tab-invitados -->
 
 </div><!-- /dashboard -->
+
+<!-- MODAL: CLAVE PARA AGREGAR INVITADO (misma clave del escáner/Tickets) -->
+<div class="tk-modal-overlay" id="tk-invgate-overlay" onclick="if(event.target===this)tkCloseGateModal()">
+  <div class="tk-modal">
+    <p class="tk-modal-title">Confirmar clave</p>
+    <div class="tk-mfield">
+      <label>Clave de tickets/escáner</label>
+      <input type="password" id="tk-invgate-input" placeholder="Clave" onkeydown="if(event.key==='Enter')tkSubmitGateModal()">
+    </div>
+    <p class="tk-modal-err" id="tk-invgate-err"></p>
+    <div class="tk-modal-acts">
+      <button class="btn-tk-modal-cancel" onclick="tkCloseGateModal()">Cancelar</button>
+      <button class="btn-tk-modal-ok" id="tk-invgate-ok" onclick="tkSubmitGateModal()">Continuar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: AGREGAR INVITADO -->
 <div class="tk-modal-overlay" id="tk-modal-overlay" onclick="if(event.target===this)tkCloseModal()">
@@ -1838,6 +1860,10 @@
     const count = document.getElementById('tk-count-' + tab);
     if (!tbody) return;
     count.textContent = rows.length + ' registro' + (rows.length !== 1 ? 's' : '');
+    if (tab === 'inv') {
+      const totalEl = document.getElementById('inv-total-count');
+      if (totalEl) totalEl.textContent = (tkData.inv || []).length;
+    }
 
     const colsEmpty = { ind: 6, grp: 8, inv: 3 };
     if (rows.length === 0) {
@@ -2032,6 +2058,39 @@
           btn.classList.remove('confirming');
         }
       }, 3000);
+    }
+  }
+
+  /* ── MODAL: CLAVE PARA AGREGAR INVITADO ── */
+  // Ver la lista de invitados no pide clave (ya estás en la sesión del
+  // admin), pero agregar uno nuevo sí — la misma clave de tickets/escáner,
+  // como pidió el usuario, a modo de confirmación extra antes de escribir.
+  function tkGateOpenModal() {
+    document.getElementById('tk-invgate-err').textContent = '';
+    document.getElementById('tk-invgate-input').value = '';
+    document.getElementById('tk-invgate-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('tk-invgate-input').focus(), 80);
+  }
+
+  function tkCloseGateModal() {
+    document.getElementById('tk-invgate-overlay').classList.remove('open');
+  }
+
+  async function tkSubmitGateModal() {
+    const key = (document.getElementById('tk-invgate-input').value || '').trim();
+    const errEl = document.getElementById('tk-invgate-err');
+    if (!key) { errEl.textContent = 'Escribe la clave.'; return; }
+    const okBtn = document.getElementById('tk-invgate-ok');
+    okBtn.disabled = true; okBtn.textContent = 'Verificando…';
+    try {
+      const r = await fetch('/api/tickets/list', { headers: { 'x-scan-key': key } });
+      if (!r.ok) { errEl.textContent = 'Clave incorrecta.'; return; }
+      tkCloseGateModal();
+      tkOpenModal();
+    } catch (e) {
+      errEl.textContent = 'Error de red.';
+    } finally {
+      okBtn.disabled = false; okBtn.textContent = 'Continuar';
     }
   }
 
