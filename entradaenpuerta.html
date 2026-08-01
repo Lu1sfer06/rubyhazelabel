@@ -84,6 +84,34 @@
   }
   #pp-button-dayof{ display:flex; justify-content:center; }
 
+  .qty-selector{ text-align:center; margin-bottom: 22px; }
+  .qty-label{
+    display:block;
+    color:#111111;
+    font-weight:700;
+    font-size:0.8rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:12px;
+  }
+  .qty-control{ display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:12px; }
+  .qty-btn{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:none;
+    background:#111111;
+    color:#ffffff;
+    font-size:1.2rem;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+  }
+  .qty-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+  #dayQtyValue{ font-size:1.3rem; font-weight:800; color:#111111; min-width:24px; text-align:center; }
+  .qty-total{ color:#111111; font-weight:700; font-size:0.95rem; margin-bottom: 22px; }
+  .qty-total strong{ color: var(--red); font-weight:800; }
+
   footer{
     background: #000000;
     padding: 36px 8%;
@@ -112,6 +140,15 @@
     <h1 class="dayof-title">THE TRIBE PT.II</h1>
     <p class="dayof-sub">Entrada en Puerta</p>
     <div class="dayof-card">
+      <div class="qty-selector">
+        <span class="qty-label">Cantidad de entradas</span>
+        <div class="qty-control">
+          <button type="button" class="qty-btn" id="dayQtyMinus" aria-label="Restar entrada">&minus;</button>
+          <span id="dayQtyValue">1</span>
+          <button type="button" class="qty-btn" id="dayQtyPlus" aria-label="Sumar entrada">+</button>
+        </div>
+        <p class="qty-total">Total a pagar: <strong id="dayQtyTotal">$20.92</strong></p>
+      </div>
       <div id="pp-button-dayof"></div>
     </div>
   </div>
@@ -133,6 +170,14 @@
   };
 
   const PRICE_USD = 20.92;
+  const MAX_QTY = 5;
+  let quantity = 1;
+  let payphoneReady = false;
+
+  const qtyValueEl = document.getElementById('dayQtyValue');
+  const qtyTotalEl = document.getElementById('dayQtyTotal');
+  const qtyMinusBtn = document.getElementById('dayQtyMinus');
+  const qtyPlusBtn = document.getElementById('dayQtyPlus');
 
   // El script de Payphone se carga como módulo (type="module"), que se
   // ejecuta después del parseo del HTML — si llamamos PPaymentButtonBox
@@ -144,7 +189,12 @@
       setTimeout(renderPayphoneButton, 150);
       return;
     }
-    const amountCents = Math.round(PRICE_USD * 100);
+    payphoneReady = true;
+
+    const ppButtonEl = document.getElementById('pp-button-dayof');
+    ppButtonEl.innerHTML = '';
+
+    const amountCents = Math.round(PRICE_USD * quantity * 100);
     const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     const promotorCode = new URLSearchParams(location.search).get('pr') || '';
 
@@ -163,12 +213,27 @@
       tax: 0,
       currency: 'USD',
       storeId: CONFIG.payphoneStoreId,
-      reference: 'Ticket Ruby Haze — Entrada en Puerta',
+      reference: `Ticket Ruby Haze — Entrada en Puerta x${quantity}`,
       lang: 'es'
     }).render('pp-button-dayof');
   }
 
-  window.addEventListener('DOMContentLoaded', renderPayphoneButton);
+  function updateQty(newQty){
+    quantity = Math.min(MAX_QTY, Math.max(1, newQty));
+    qtyValueEl.textContent = quantity;
+    qtyTotalEl.textContent = `$${(PRICE_USD * quantity).toFixed(2)}`;
+    qtyMinusBtn.disabled = quantity <= 1;
+    qtyPlusBtn.disabled = quantity >= MAX_QTY;
+    if(payphoneReady) renderPayphoneButton();
+  }
+
+  qtyMinusBtn.addEventListener('click', () => updateQty(quantity - 1));
+  qtyPlusBtn.addEventListener('click', () => updateQty(quantity + 1));
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateQty(1);
+    renderPayphoneButton();
+  });
 </script>
 
 </body>
