@@ -597,15 +597,15 @@
     updateQty(0);
   });
 
-  // A las 7PM del día del evento (hora Ecuador, UTC-5): se oculta la tarjeta
-  // de preventa (nombre + cantidad + Payphone) sin reemplazarla por nada —
-  // la compra de puerta vive aparte, en entradaenpuerta.html.
+  // A las 7PM del día del evento (hora Ecuador, UTC-5): esta página deja de
+  // servir por completo — redirige al inicio en vez de solo esconder la
+  // tarjeta de pago, para que ya no quede accesible ni cargada. La compra
+  // de puerta vive aparte, en entradaenpuerta.html.
   const PREVENTA_CUTOFF = new Date('2026-08-01T19:00:00-05:00');
 
   function checkPreventaCutoff(){
     if(Date.now() < PREVENTA_CUTOFF.getTime()) return;
-    const preventaCard = document.getElementById('preventaCard');
-    if(preventaCard) preventaCard.style.display = 'none';
+    window.location.replace('/');
   }
 
   checkPreventaCutoff();
