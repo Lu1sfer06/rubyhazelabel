@@ -929,37 +929,26 @@
     </div><!-- /tk-content -->
   </div><!-- /tab-tickets -->
 
-  <!-- TAB: INVITADOS (aparte, no mezclado con Individuales/Grupos) -->
+  <!-- TAB: INVITADOS — solo visual, sin clave aparte (ya estás en la sesión
+       del admin); aparte de Órdenes de compra para que no se mezclen. -->
   <div class="tab-panel" id="tab-invitados">
-
-    <!-- Bloqueo -->
-    <div class="tk-lock" id="inv-lock">
-      <p>Esta sección usa la clave del escáner de puerta.</p>
-      <div class="tk-lock-row">
-        <input type="password" id="inv-key-input" placeholder="Clave escáner" onkeydown="if(event.key==='Enter')invUnlock()">
-        <button class="btn-tk-unlock" onclick="invUnlock()">Desbloquear</button>
-      </div>
-      <p class="tk-lock-err" id="inv-lock-err">Clave incorrecta.</p>
+    <div class="filter-row">
+      <button class="btn-tk-add" onclick="tkOpenModal()">+ Agregar invitado</button>
     </div>
-
-    <!-- Contenido desbloqueado -->
-    <div class="tk-content" id="inv-content">
-      <div class="tk-toolbar">
-        <input class="tk-search" type="text" placeholder="Buscar nombre..." oninput="tkSearch('inv',this.value)">
-        <button class="btn-tk-add" onclick="tkOpenModal()">+ Agregar</button>
-        <span class="tk-count" id="tk-count-inv"></span>
+    <div class="table-wrap">
+      <p class="table-title">
+        <span>Invitados</span>
+        <span id="tk-count-inv" style="color:#8a8a8f;"></span>
+      </p>
+      <div style="overflow-x:auto;">
+        <table style="min-width:480px;">
+          <thead><tr>
+            <th># Lista</th><th>Nombre</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tk-tbody-inv"></tbody>
+        </table>
       </div>
-      <div class="tk-table-wrap">
-        <div class="tk-table-scroll">
-          <table class="tk-table">
-            <thead><tr>
-              <th># Lista</th><th>Nombre</th><th>Acciones</th>
-            </tr></thead>
-            <tbody id="tk-tbody-inv"></tbody>
-          </table>
-        </div>
-      </div>
-    </div><!-- /inv-content -->
+    </div>
   </div><!-- /tab-invitados -->
 
 </div><!-- /dashboard -->
@@ -1292,7 +1281,8 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + id).classList.add('active');
     btn.classList.add('active');
-    if ((id === 'tickets' || id === 'invitados') && tkUnlocked) tkLoadData();
+    if (id === 'tickets' && tkUnlocked) tkLoadData();
+    if (id === 'invitados') tkLoadInvitados();
     if (id === 'evento') onSwitchToEvento();
   }
 
@@ -1751,14 +1741,9 @@
   let tkCurrentModal = ''; // 'ind' | 'grp' | 'inv'
   let tkDeletePending = {}; // { code: timestamp } for double-click confirm
 
-  // Verify SCAN_PASSWORD client-side by calling a protected endpoint.
-  // Compartida entre la pestaña Tickets y la pestaña Invitados (aparte):
-  // desbloquear una desbloquea también la otra, porque usan la misma clave.
-  async function tkUnlock() { return sharedTkUnlock('tk-key-input', 'tk-lock-err'); }
-  async function invUnlock() { return sharedTkUnlock('inv-key-input', 'inv-lock-err'); }
-
-  async function sharedTkUnlock(inputId, errId) {
-    const key = (document.getElementById(inputId).value || '').trim();
+  // Verify SCAN_PASSWORD client-side by calling a protected endpoint
+  async function tkUnlock() {
+    const key = (document.getElementById('tk-key-input').value || '').trim();
     if (!key) return;
     // Use /api/tickets/list as verification — if it returns 200 we're good
     try {
@@ -1766,22 +1751,33 @@
       if (r.ok) {
         tkKey = key;
         tkUnlocked = true;
-        ['tk-lock', 'inv-lock'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.style.display = 'none';
-        });
-        ['tk-content', 'inv-content'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.classList.add('open');
-        });
-        document.getElementById(errId).classList.remove('on');
+        document.getElementById('tk-lock').style.display = 'none';
+        document.getElementById('tk-content').classList.add('open');
+        document.getElementById('tk-lock-err').classList.remove('on');
         await tkLoadData();
       } else {
-        document.getElementById(errId).classList.add('on');
+        document.getElementById('tk-lock-err').classList.add('on');
       }
     } catch (e) {
-      document.getElementById(errId).classList.add('on');
+      document.getElementById('tk-lock-err').classList.add('on');
     }
+  }
+
+  // Invitados no pide clave aparte: usa la misma sesión con la que ya
+  // entraste al panel (sessionKey), porque server.js acepta esa clave como
+  // válida también para las rutas de tickets.
+  async function tkLoadInvitados() {
+    if (!tkKey) {
+      tkKey = sessionKey;
+      // Si el usuario luego entra a la pestaña Tickets, que no le vuelva a
+      // salir el candado — ya quedó autenticado al entrar por Invitados.
+      const lockEl = document.getElementById('tk-lock');
+      const contentEl = document.getElementById('tk-content');
+      if (lockEl) lockEl.style.display = 'none';
+      if (contentEl) contentEl.classList.add('open');
+    }
+    tkUnlocked = true;
+    await tkLoadData();
   }
 
   async function tkLoadData() {

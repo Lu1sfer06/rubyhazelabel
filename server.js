@@ -866,8 +866,12 @@ app.post('/api/payphone/confirm', purchaseLimiter, async (req, res) => {
 function requireScanKey(req, res, next) {
   adminLimiter(req, res, () => {
     const key = (req.headers['x-scan-key'] || '').trim();
+    // La sesión principal del admin (PROMOTER_PASSWORD) también sirve aquí:
+    // así el apartado de Invitados en el panel puede usar los endpoints de
+    // tickets sin pedir de nuevo la clave de escáner por separado.
     const valid = (SCAN_PASSWORD && key === SCAN_PASSWORD) ||
-                  (TICKETS_ADMIN_PASSWORD && key === TICKETS_ADMIN_PASSWORD);
+                  (TICKETS_ADMIN_PASSWORD && key === TICKETS_ADMIN_PASSWORD) ||
+                  (PROMOTER_PASSWORD && key === PROMOTER_PASSWORD);
     if (!valid) return res.status(401).json({ error: 'unauthorized' });
     next();
   });
@@ -1398,6 +1402,11 @@ app.get('/api/promotores/ranking', (req, res) => {
 app.get('/api/promotores/stats', requireAdminKey, (req, res) => {
   const byPromotor = {};
   for (const [code, ticket] of Object.entries(issuedTickets)) {
+    // Los invitados/cortesía (RH-MANUAL) no son ventas ni órdenes de compra
+    // reales — no deben contar en "Total vendido", "Órdenes de compra" ni
+    // mezclarse con las ventas de un promotor. Viven aparte, en su propio
+    // apartado del panel.
+    if (code.startsWith('RH-MANUAL')) continue;
     const pr = (ticket.promotorCode || '').toLowerCase() || '__directo__';
     if (!byPromotor[pr]) byPromotor[pr] = { code: pr, tickets: 0, ordenes: [] };
     byPromotor[pr].tickets += ticket.quantity;
