@@ -1098,11 +1098,13 @@ app.post('/api/tickets/create-manual', requireScanKey, async (req, res) => {
 // que el admin pueda distinguir el origen si hace falta, sin afectar
 // ninguna otra lógica.
 app.post('/api/tickets/create-paid-manual', requireScanKey, async (req, res) => {
-  const { cardholderName, document, quantity, email, phoneNumber } = req.body || {};
+  const { cardholderName, document, quantity, email, phoneNumber, promotorCode } = req.body || {};
   if (!cardholderName) {
     return res.status(400).json({ error: 'Falta cardholderName.' });
   }
   const qty = Math.max(1, parseInt(quantity, 10) || 1);
+  const rawPromoCode = String(promotorCode || '').trim().toLowerCase();
+  const validPromoCode = promotoresDB.find(p => p.active && p.code === rawPromoCode) ? rawPromoCode : '';
   const ticketCode = `RH-VENTAMANUAL${Date.now()}`;
   const listNumber = registerIssuedTicket(ticketCode, {
     transactionId: `MANUAL-PAGO-${Date.now()}`,
@@ -1110,7 +1112,8 @@ app.post('/api/tickets/create-paid-manual', requireScanKey, async (req, res) => 
     document: document || '',
     quantity: qty,
     email: email || '',
-    phoneNumber: phoneNumber || ''
+    phoneNumber: phoneNumber || '',
+    promotorCode: validPromoCode
   });
 
   syncToSheet(issuedTickets[ticketCode]);
@@ -1124,6 +1127,8 @@ app.post('/api/tickets/create-paid-manual', requireScanKey, async (req, res) => 
     created: true,
     ticketCode,
     listNumber,
+    promotorCode: validPromoCode,
+    promotorCodeIgnored: !!(rawPromoCode && !validPromoCode),
     qrUrl: `https://rubyhazemusic.com/api/tickets/qr/${encodeURIComponent(ticketCode)}`
   });
 });

@@ -997,7 +997,11 @@
     </div>
     <div class="tk-mfield">
       <label>Teléfono <span style="color:#555;font-weight:400;">(opcional)</span></label>
-      <input type="text" id="tk-s-phone" placeholder="09xxxxxxxx" onkeydown="if(event.key==='Enter')tkSubmitSaleModal()">
+      <input type="text" id="tk-s-phone" placeholder="09xxxxxxxx" onkeydown="if(event.key==='Enter')document.getElementById('tk-s-promo').focus()">
+    </div>
+    <div class="tk-mfield">
+      <label>Código de promotor <span style="color:#555;font-weight:400;">(opcional, ej. jasna-c)</span></label>
+      <input type="text" id="tk-s-promo" placeholder="Código de promotor" onkeydown="if(event.key==='Enter')tkSubmitSaleModal()">
     </div>
     <p class="tk-modal-err" id="tk-sale-modal-err"></p>
     <div class="tk-modal-acts">
@@ -2015,7 +2019,7 @@
   /* ── MODAL: AGREGAR VENTA MANUAL ── */
   function tkOpenSaleModal() {
     document.getElementById('tk-sale-modal-err').textContent = '';
-    ['tk-s-name','tk-s-email','tk-s-doc','tk-s-phone'].forEach(id => {
+    ['tk-s-name','tk-s-email','tk-s-doc','tk-s-phone','tk-s-promo'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('tk-s-qty').value = '1';
@@ -2033,6 +2037,7 @@
     const email = document.getElementById('tk-s-email').value.trim();
     const document_ = document.getElementById('tk-s-doc').value.trim();
     const phoneNumber = document.getElementById('tk-s-phone').value.trim();
+    const promotorCode = document.getElementById('tk-s-promo').value.trim();
     const errEl = document.getElementById('tk-sale-modal-err');
 
     if (!cardholderName) { errEl.textContent = 'El nombre es obligatorio.'; return; }
@@ -2045,10 +2050,13 @@
       const r = await fetch('/api/tickets/create-paid-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-scan-key': tkKey },
-        body: JSON.stringify({ cardholderName, quantity, email, document: document_, phoneNumber })
+        body: JSON.stringify({ cardholderName, quantity, email, document: document_, phoneNumber, promotorCode })
       });
       const d = await r.json();
       if (!r.ok) { errEl.textContent = d.error || 'Error al crear.'; return; }
+      if (promotorCode && d.promotorCodeIgnored) {
+        alert('Venta creada, pero el código de promotor "' + promotorCode + '" no se reconoció (revisa que esté bien escrito y activo). Puedes asignarlo después desde la tabla.');
+      }
       tkCloseSaleModal();
       await tkLoadData();
     } catch (e) {
