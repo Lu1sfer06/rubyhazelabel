@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrada en Puerta — THE TRIBE PT.II | Ruby Haze</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@200;300;400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.payphonetodoesposible.com/box/v2.0/payphone-payment-box.css">
+<script type="module" src="https://cdn.payphonetodoesposible.com/box/v2.0/payphone-payment-box.js"></script>
+<style>
+  :root{
+    --red: #a2031a;
+    --yellow: #dbce44;
+  }
+  *{ box-sizing: border-box; margin:0; padding:0; }
+  body{
+    min-height: 100vh;
+    background: #0a0a0a;
+    color: #ffffff;
+    font-family: 'Google Sans Flex', sans-serif;
+    font-weight: 300;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 18px 6%;
+    background: #000000;
+  }
+  header .logo-mark{ width: 150px; height: 56px; }
+  header .logo-mark img{ width:100%; height:100%; object-fit: contain; }
+  .back-link{
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ffffff;
+    transition: opacity 0.25s;
+  }
+  .back-link:hover{ opacity: 0.75; }
+
+  #dayOfSection{
+    position: relative;
+    min-height: calc(100vh - 92px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 6% 80px;
+    background:
+      linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.75) 55%, rgba(10,10,10,0.95) 100%),
+      url('eventos/gustavo%20web.jpg') center 40%/cover no-repeat;
+  }
+  .dayof-content{
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+  .dayof-title{
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: clamp(2.4rem, 9vw, 4rem);
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+  .dayof-sub{
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: clamp(1rem, 3.5vw, 1.3rem);
+    color: #fff;
+    margin-bottom: 34px;
+  }
+  .dayof-card{
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  #pp-button-dayof{ display:flex; justify-content:center; }
+
+  footer{
+    background: #000000;
+    padding: 36px 8%;
+    text-align: center;
+  }
+  footer .legal{
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.03em;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  footer .legal a{ color: rgba(255,255,255,0.6); text-decoration: underline; }
+  footer .legal a:hover{ color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark"><img src="eventos/rombo%20blanco.png" alt="Ruby Haze"></div>
+  <a class="back-link" href="/">&larr; Volver al inicio</a>
+</header>
+
+<section id="dayOfSection">
+  <div class="dayof-content">
+    <h1 class="dayof-title">THE TRIBE PT.II</h1>
+    <p class="dayof-sub">Entrada en Puerta</p>
+    <div class="dayof-card">
+      <div id="pp-button-dayof"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="legal">© <span id="year"></span> Ruby Haze. Todos los derechos reservados. · Contacto: <a href="mailto:maison@rubyhazelabel.com">maison@rubyhazelabel.com</a></div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+<script>
+  // Token/StoreId de la app "Ruby Haze Tickets" — la Cajita de Payphone
+  // exige que estos valores vivan en el navegador.
+  const CONFIG = {
+    payphoneToken: '9ad8vjrkLEzpFwRti8WJorwelVfDCXOy5VNGJl8i5XkmTclGuP9PkJeiQ6yRxAm1-gqCSw8-9l46DC3UfV1R-0AsAbM5iExqxwNe61O8PkknV05E2hH3MTCuAemtxq6SxO2rX5CBIk2_eia0kmpVmYZ9yIp5p5vZveRGvYS93I_NXHRpmE-kNZIV1lS1bAmYjpqy67xVJzUhDmlzTIzRWU2pnYHyeWyHbh8OMjj7WFbZvGPYZ1xMKM8zc1wiyrbNoq6CIBlBSbjcCSgwJym2Wky9wjxr1Q2C9zZnzDO0wAGwItHdOgQOm5qyLfGM9_vnPxwqru5Nph6y9kb2-0t3EwBAt8k',
+    payphoneStoreId: '6227abe0-9fc1-47cb-afdb-6505f3623b6f'
+  };
+
+  const PRICE_USD = 20.92;
+  const amountCents = Math.round(PRICE_USD * 100);
+  const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  const promotorCode = new URLSearchParams(location.search).get('pr') || '';
+
+  fetch('/api/tickets/intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientTransactionId, promotorCode })
+  }).catch((err) => console.error('No se pudo registrar el intento de entrada en puerta:', err));
+
+  new PPaymentButtonBox({
+    token: CONFIG.payphoneToken,
+    clientTransactionId,
+    amount: amountCents,
+    amountWithoutTax: amountCents,
+    amountWithTax: 0,
+    tax: 0,
+    currency: 'USD',
+    storeId: CONFIG.payphoneStoreId,
+    reference: 'Ticket Ruby Haze — Entrada en Puerta',
+    lang: 'es'
+  }).render('pp-button-dayof');
+</script>
+
+</body>
+</html>

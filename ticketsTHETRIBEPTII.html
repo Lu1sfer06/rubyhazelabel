@@ -265,47 +265,6 @@
     padding: 30px;
     box-shadow: 0 24px 60px rgba(0,0,0,0.4);
   }
-  /* SECCIÓN APARTE: Entrada en puerta (día del evento) — reemplaza toda
-     la página de preventa, con el flyer de fondo. */
-  #dayOfSection{
-    position: relative;
-    min-height: calc(100vh - 92px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 6% 80px;
-    background:
-      linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.75) 55%, rgba(10,10,10,0.95) 100%),
-      url('eventos/gustavo%20web.jpg') center 40%/cover no-repeat;
-  }
-  .dayof-content{
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-  }
-  .dayof-title{
-    font-family: 'Google Sans Flex', sans-serif;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    font-size: clamp(2.4rem, 9vw, 4rem);
-    color: var(--yellow);
-    margin-bottom: 8px;
-  }
-  .dayof-sub{
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    font-size: clamp(1rem, 3.5vw, 1.3rem);
-    color: #fff;
-    margin-bottom: 34px;
-  }
-  .dayof-card{
-    background: #ffffff;
-    border-radius: 18px;
-    padding: 30px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-  }
   .pay-instructions{
     color: #111111;
     font-weight: 500;
@@ -512,16 +471,6 @@
 
 </main>
 
-<section id="dayOfSection" style="display:none;">
-  <div class="dayof-content">
-    <h1 class="dayof-title">THE TRIBE PT.II</h1>
-    <p class="dayof-sub">Entrada en Puerta</p>
-    <div class="dayof-card">
-      <div id="pp-button-dayof"></div>
-    </div>
-  </div>
-</section>
-
 <footer>
   <div class="legal">© <span id="year"></span> Ruby Haze. Todos los derechos reservados. · Contacto: <a href="mailto:maison@rubyhazelabel.com">maison@rubyhazelabel.com</a></div>
 </footer>
@@ -649,51 +598,18 @@
   });
 
   // A las 7PM del día del evento (hora Ecuador, UTC-5): se oculta la tarjeta
-  // de preventa (nombre + cantidad) y se muestra la tarjeta simple de
-  // "Día del Evento" — un solo botón de Payphone para 1 entrada, sin pedir
-  // nombre (Payphone lo captura en su propia ventana de pago).
-  const DAY_OF_CUTOFF = new Date('2026-08-01T19:00:00-05:00');
-  const DAY_OF_PRICE_USD = 20.92;
-  let dayOfRendered = false;
+  // de preventa (nombre + cantidad + Payphone) sin reemplazarla por nada —
+  // la compra de puerta vive aparte, en entradaenpuerta.html.
+  const PREVENTA_CUTOFF = new Date('2026-08-01T19:00:00-05:00');
 
-  function renderDayOfButton(){
-    if(dayOfRendered) return;
-    dayOfRendered = true;
-    const amountCents = Math.round(DAY_OF_PRICE_USD * 100);
-    const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-    const promotorCode = new URLSearchParams(location.search).get('pr') || '';
-
-    fetch('/api/tickets/intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientTransactionId, promotorCode })
-    }).catch((err) => console.error('No se pudo registrar el intento de día del evento:', err));
-
-    new PPaymentButtonBox({
-      token: CONFIG.payphoneToken,
-      clientTransactionId,
-      amount: amountCents,
-      amountWithoutTax: amountCents,
-      amountWithTax: 0,
-      tax: 0,
-      currency: 'USD',
-      storeId: CONFIG.payphoneStoreId,
-      reference: 'Ticket Ruby Haze — Día del Evento',
-      lang: 'es'
-    }).render('pp-button-dayof');
+  function checkPreventaCutoff(){
+    if(Date.now() < PREVENTA_CUTOFF.getTime()) return;
+    const preventaCard = document.getElementById('preventaCard');
+    if(preventaCard) preventaCard.style.display = 'none';
   }
 
-  function checkDayOfSwitch(){
-    if(Date.now() < DAY_OF_CUTOFF.getTime()) return;
-    const mainEl = document.querySelector('main');
-    const dayOfSection = document.getElementById('dayOfSection');
-    if(mainEl) mainEl.style.display = 'none';
-    if(dayOfSection) dayOfSection.style.display = 'flex';
-    renderDayOfButton();
-  }
-
-  checkDayOfSwitch();
-  setInterval(checkDayOfSwitch, 30000);
+  checkPreventaCutoff();
+  setInterval(checkPreventaCutoff, 30000);
 </script>
 
 <script>
