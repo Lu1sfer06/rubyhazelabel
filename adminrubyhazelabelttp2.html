@@ -741,6 +741,7 @@
     <button class="tab-btn" onclick="switchTab('ordenes',this)">Órdenes de compra</button>
     <button class="tab-btn" onclick="switchTab('gestion',this)">Gestión</button>
     <button class="tab-btn" onclick="switchTab('tickets',this)">Tickets</button>
+    <button class="tab-btn" onclick="switchTab('invitados',this)">Invitados</button>
     <button class="tab-btn" onclick="switchTab('evento',this)">Día del Evento</button>
   </div>
 
@@ -882,7 +883,6 @@
       <div class="tk-tabs">
         <button class="tk-tab-btn active" onclick="tkSwitchTab('ind',this)">Individuales</button>
         <button class="tk-tab-btn" onclick="tkSwitchTab('grp',this)">Grupos</button>
-        <button class="tk-tab-btn" onclick="tkSwitchTab('inv',this)">Invitados</button>
       </div>
 
       <!-- INDIVIDUALES -->
@@ -926,27 +926,41 @@
         </div>
       </div>
 
-      <!-- INVITADOS -->
-      <div class="tk-tab-panel" id="tkt-inv">
-        <div class="tk-toolbar">
-          <input class="tk-search" type="text" placeholder="Buscar nombre..." oninput="tkSearch('inv',this.value)">
-          <button class="btn-tk-add" onclick="tkOpenModal()">+ Agregar</button>
-          <span class="tk-count" id="tk-count-inv"></span>
-        </div>
-        <div class="tk-table-wrap">
-          <div class="tk-table-scroll">
-            <table class="tk-table">
-              <thead><tr>
-                <th># Lista</th><th>Nombre</th><th>Acciones</th>
-              </tr></thead>
-              <tbody id="tk-tbody-inv"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
     </div><!-- /tk-content -->
   </div><!-- /tab-tickets -->
+
+  <!-- TAB: INVITADOS (aparte, no mezclado con Individuales/Grupos) -->
+  <div class="tab-panel" id="tab-invitados">
+
+    <!-- Bloqueo -->
+    <div class="tk-lock" id="inv-lock">
+      <p>Esta sección usa la clave del escáner de puerta.</p>
+      <div class="tk-lock-row">
+        <input type="password" id="inv-key-input" placeholder="Clave escáner" onkeydown="if(event.key==='Enter')invUnlock()">
+        <button class="btn-tk-unlock" onclick="invUnlock()">Desbloquear</button>
+      </div>
+      <p class="tk-lock-err" id="inv-lock-err">Clave incorrecta.</p>
+    </div>
+
+    <!-- Contenido desbloqueado -->
+    <div class="tk-content" id="inv-content">
+      <div class="tk-toolbar">
+        <input class="tk-search" type="text" placeholder="Buscar nombre..." oninput="tkSearch('inv',this.value)">
+        <button class="btn-tk-add" onclick="tkOpenModal()">+ Agregar</button>
+        <span class="tk-count" id="tk-count-inv"></span>
+      </div>
+      <div class="tk-table-wrap">
+        <div class="tk-table-scroll">
+          <table class="tk-table">
+            <thead><tr>
+              <th># Lista</th><th>Nombre</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tk-tbody-inv"></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /inv-content -->
+  </div><!-- /tab-invitados -->
 
 </div><!-- /dashboard -->
 
@@ -1150,7 +1164,7 @@
       renderAll();
       const activeTab = document.querySelector('.tab-panel.active');
       if (activeTab?.id === 'tab-evento') loadEventDay();
-      if (activeTab?.id === 'tab-tickets' && tkUnlocked) tkLoadData();
+      if ((activeTab?.id === 'tab-tickets' || activeTab?.id === 'tab-invitados') && tkUnlocked) tkLoadData();
     } catch (e) { console.error('refreshAll error', e); }
     finally { if (btn) { btn.disabled = false; btn.style.opacity = ''; } }
   }
@@ -1278,7 +1292,7 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + id).classList.add('active');
     btn.classList.add('active');
-    if (id === 'tickets' && tkUnlocked) tkLoadData();
+    if ((id === 'tickets' || id === 'invitados') && tkUnlocked) tkLoadData();
     if (id === 'evento') onSwitchToEvento();
   }
 
@@ -1737,9 +1751,14 @@
   let tkCurrentModal = ''; // 'ind' | 'grp' | 'inv'
   let tkDeletePending = {}; // { code: timestamp } for double-click confirm
 
-  // Verify SCAN_PASSWORD client-side by calling a protected endpoint
-  async function tkUnlock() {
-    const key = (document.getElementById('tk-key-input').value || '').trim();
+  // Verify SCAN_PASSWORD client-side by calling a protected endpoint.
+  // Compartida entre la pestaña Tickets y la pestaña Invitados (aparte):
+  // desbloquear una desbloquea también la otra, porque usan la misma clave.
+  async function tkUnlock() { return sharedTkUnlock('tk-key-input', 'tk-lock-err'); }
+  async function invUnlock() { return sharedTkUnlock('inv-key-input', 'inv-lock-err'); }
+
+  async function sharedTkUnlock(inputId, errId) {
+    const key = (document.getElementById(inputId).value || '').trim();
     if (!key) return;
     // Use /api/tickets/list as verification — if it returns 200 we're good
     try {
@@ -1747,15 +1766,21 @@
       if (r.ok) {
         tkKey = key;
         tkUnlocked = true;
-        document.getElementById('tk-lock').style.display = 'none';
-        document.getElementById('tk-content').classList.add('open');
-        document.getElementById('tk-lock-err').classList.remove('on');
+        ['tk-lock', 'inv-lock'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+        ['tk-content', 'inv-content'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('open');
+        });
+        document.getElementById(errId).classList.remove('on');
         await tkLoadData();
       } else {
-        document.getElementById('tk-lock-err').classList.add('on');
+        document.getElementById(errId).classList.add('on');
       }
     } catch (e) {
-      document.getElementById('tk-lock-err').classList.add('on');
+      document.getElementById(errId).classList.add('on');
     }
   }
 
