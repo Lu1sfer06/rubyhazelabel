@@ -61,9 +61,10 @@
   }
   .dayof-title{
     font-weight: 900;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
-    font-size: clamp(2.4rem, 9vw, 4rem);
+    font-size: clamp(1.3rem, 7vw, 3.6rem);
+    white-space: nowrap;
     color: var(--yellow);
     margin-bottom: 8px;
   }
@@ -132,28 +133,42 @@
   };
 
   const PRICE_USD = 20.92;
-  const amountCents = Math.round(PRICE_USD * 100);
-  const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-  const promotorCode = new URLSearchParams(location.search).get('pr') || '';
 
-  fetch('/api/tickets/intent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientTransactionId, promotorCode })
-  }).catch((err) => console.error('No se pudo registrar el intento de entrada en puerta:', err));
+  // El script de Payphone se carga como módulo (type="module"), que se
+  // ejecuta después del parseo del HTML — si llamamos PPaymentButtonBox
+  // de inmediato (script clásico corriendo durante el parseo), la clase
+  // todavía no existe y el botón nunca se dibuja. Por eso esperamos a
+  // DOMContentLoaded, y si por alguna razón el módulo tarda más, reintenta.
+  function renderPayphoneButton(){
+    if(typeof PPaymentButtonBox === 'undefined'){
+      setTimeout(renderPayphoneButton, 150);
+      return;
+    }
+    const amountCents = Math.round(PRICE_USD * 100);
+    const clientTransactionId = 'RH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    const promotorCode = new URLSearchParams(location.search).get('pr') || '';
 
-  new PPaymentButtonBox({
-    token: CONFIG.payphoneToken,
-    clientTransactionId,
-    amount: amountCents,
-    amountWithoutTax: amountCents,
-    amountWithTax: 0,
-    tax: 0,
-    currency: 'USD',
-    storeId: CONFIG.payphoneStoreId,
-    reference: 'Ticket Ruby Haze — Entrada en Puerta',
-    lang: 'es'
-  }).render('pp-button-dayof');
+    fetch('/api/tickets/intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientTransactionId, promotorCode })
+    }).catch((err) => console.error('No se pudo registrar el intento de entrada en puerta:', err));
+
+    new PPaymentButtonBox({
+      token: CONFIG.payphoneToken,
+      clientTransactionId,
+      amount: amountCents,
+      amountWithoutTax: amountCents,
+      amountWithTax: 0,
+      tax: 0,
+      currency: 'USD',
+      storeId: CONFIG.payphoneStoreId,
+      reference: 'Ticket Ruby Haze — Entrada en Puerta',
+      lang: 'es'
+    }).render('pp-button-dayof');
+  }
+
+  window.addEventListener('DOMContentLoaded', renderPayphoneButton);
 </script>
 
 </body>
