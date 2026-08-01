@@ -550,7 +550,7 @@
       await fetch('/api/tickets/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientTransactionId, cardholderName: name, promotorCode })
+        body: JSON.stringify({ clientTransactionId, cardholderName: name, promotorCode, flow: 'preventa' })
       });
     } catch (err) {
       console.error('No se pudo registrar el nombre antes del pago:', err);

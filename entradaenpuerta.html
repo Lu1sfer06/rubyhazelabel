@@ -151,7 +151,7 @@
     fetch('/api/tickets/intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientTransactionId, promotorCode })
+      body: JSON.stringify({ clientTransactionId, promotorCode, flow: 'doorentry' })
     }).catch((err) => console.error('No se pudo registrar el intento de entrada en puerta:', err));
 
     new PPaymentButtonBox({

@@ -54,6 +54,13 @@ const EVENT = {
 // Payphone no siempre llegan de vuelta en el Confirm.
 const MAX_QTY = 5;
 const PRICE_USD = 20.92;
+// Cierre real de la preventa — no es solo visual: el confirm de Payphone
+// rechaza registrar el ticket (sin importar cómo se haya disparado el pago)
+// si la compra no viene marcada como "doorentry" (entradaenpuerta.html) y
+// ya pasó esta hora. Así alguien que encuentre el link viejo o llame a la
+// API a mano ya no puede sacar un ticket válido de preventa después de la
+// hora de cierre.
+const PREVENTA_CUTOFF = new Date('2026-08-01T19:00:00-05:00');
 
 function pricePerTicket(qty) {
   return PRICE_USD;
@@ -733,7 +740,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // en ticketsTHETRIBEPTII.html), para dejar el nombre ya guardado de nuestro
 // lado antes de que el comprador llegue a pagar.
 app.post('/api/tickets/intent', purchaseLimiter, (req, res) => {
-  const { clientTransactionId, cardholderName, promotorCode } = req.body || {};
+  const { clientTransactionId, cardholderName, promotorCode, flow } = req.body || {};
   if (!clientTransactionId) {
     return res.status(400).json({ ok: false });
   }
@@ -741,8 +748,9 @@ app.post('/api/tickets/intent', purchaseLimiter, (req, res) => {
   const rawCode = String(promotorCode || '').trim().toLowerCase();
   const validCode = promotoresDB.find(p => p.active && p.code === rawCode) ? rawCode : '';
   pendingPurchases.set(clientTransactionId, {
-    cardholderName: String(cardholderName).trim(),
+    cardholderName: String(cardholderName || '').trim(),
     promotorCode: validCode,
+    flow: flow === 'doorentry' ? 'doorentry' : 'preventa',
     createdAt: Date.now()
   });
   savePendingPurchases();
@@ -790,6 +798,16 @@ app.post('/api/payphone/confirm', purchaseLimiter, async (req, res) => {
       const pending = pendingPurchases.get(clientTransactionId);
       pendingPurchases.delete(clientTransactionId);
       savePendingPurchases();
+
+      // Sin registro de intent (nadie llamó a /api/tickets/intent) se asume
+      // preventa por seguridad — así alguien que se salte ese paso a mano
+      // sigue sin poder sacar un ticket de preventa después del cierre.
+      const isDoorEntry = !!(pending && pending.flow === 'doorentry');
+      if (!isDoorEntry && Date.now() >= PREVENTA_CUTOFF.getTime()) {
+        console.warn('Preventa cerrada — pago aprobado pero se rechaza el ticket:', data.transactionId);
+        return res.json({ success: false, status: 'PreventaCerrada' });
+      }
+
       const cardholderName = (pending && pending.cardholderName) || (data.optionalParameter4 || '').trim();
       const promotorCode = (pending && pending.promotorCode) || '';
       // TEMPORAL: para diagnosticar por qué a veces no llega correo/teléfono
