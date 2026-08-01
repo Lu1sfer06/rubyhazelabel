@@ -734,7 +734,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // lado antes de que el comprador llegue a pagar.
 app.post('/api/tickets/intent', purchaseLimiter, (req, res) => {
   const { clientTransactionId, cardholderName, promotorCode } = req.body || {};
-  if (!clientTransactionId || !cardholderName) {
+  if (!clientTransactionId) {
     return res.status(400).json({ ok: false });
   }
   cleanupPendingPurchases();

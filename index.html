@@ -1263,6 +1263,48 @@
     animation: shimmer 2.6s linear infinite, tagGlowYellow 2.6s ease-in-out infinite;
   }
 
+  .tribe-event-card.is-soldout img{ filter: brightness(0.45) saturate(0.7); }
+  .tribe-event-card.is-soldout .tribe-event-cta{ display: none !important; }
+  .tribe-event-card.is-soldout{ animation: none; }
+
+  .soldout-ribbon{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 6;
+    transform: translate(-50%, -50%) rotate(-11deg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20,0,2,0.88);
+    color: #fff;
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-size: clamp(1.3rem, 5vw, 2.4rem);
+    padding: 12px 34px;
+    white-space: nowrap;
+    border: 3px solid #ff2f45;
+    border-radius: 6px;
+    box-shadow: 0 0 0 3px rgba(255,47,69,0.25), 0 14px 40px rgba(0,0,0,0.6);
+    text-shadow: 0 0 12px rgba(255,47,69,0.7);
+    animation: soldoutGlow 2.2s ease-in-out infinite;
+  }
+  .soldout-ribbon::before{
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border: 1.5px dashed rgba(255,255,255,0.55);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  @keyframes soldoutGlow{
+    0%, 100%{ box-shadow: 0 0 0 3px rgba(255,47,69,0.25), 0 14px 40px rgba(0,0,0,0.6); }
+    50%{ box-shadow: 0 0 0 6px rgba(255,47,69,0.4), 0 0 34px rgba(255,47,69,0.55), 0 14px 40px rgba(0,0,0,0.6); }
+  }
+
   @keyframes tribePulse{
     0%, 100%{
       box-shadow: 0 0 18px rgba(219,206,68,0.55), 0 0 42px rgba(219,206,68,0.2), 0 10px 36px rgba(0,0,0,0.3);
@@ -1455,7 +1497,7 @@
       <span class="cd-sep">·</span>
       <div class="cd-unit"><b id="cdSecs">--</b><small>SEG</small></div>
     </div>
-    <a class="hero-tickets-btn" href="#events">Tickets Disponibles ↓</a>
+    <a class="hero-tickets-btn" id="heroTicketsBtn" href="#events">Preventas Acaba Hoy 5PM ↓</a>
   </div>
 </section>
 
@@ -1502,8 +1544,9 @@
 <section id="events">
   <h2 class="section-title">Eventos</h2>
   <div class="events-grid">
-    <a href="ticketsTHETRIBEPTII" class="tribe-event-card">
-      <span class="tribe-event-tag">Tickets Disponibles</span>
+    <a href="ticketsTHETRIBEPTII" class="tribe-event-card" id="tribeEventCard">
+      <span class="tribe-event-tag" id="tribeEventTag">Tickets Disponibles</span>
+      <span class="soldout-ribbon" id="soldoutRibbon" style="display:none;">Sold Out</span>
       <picture>
         <img src="eventos/THE%20TRIBE%20BANNER.png" alt="THE TRIBE PT.II — Sábado 01 de Agosto">
       </picture>
@@ -1908,6 +1951,27 @@
     }
     tick();
     setInterval(tick, 1000);
+  })();
+
+  // A las 7PM del día del evento (hora Ecuador, UTC-5): se muestra el sello
+  // "Sold Out" sobre el flyer y cambia la etiqueta, sin tocar el contador.
+  (function(){
+    const soldoutAt = new Date('2026-08-01T19:00:00-05:00');
+    const ribbon = document.getElementById('soldoutRibbon');
+    const tag = document.getElementById('tribeEventTag');
+    const card = document.getElementById('tribeEventCard');
+    const heroBtn = document.getElementById('heroTicketsBtn');
+    if(!ribbon || !tag || !card) return;
+    function checkSoldout(){
+      if(Date.now() >= soldoutAt.getTime()){
+        ribbon.style.display = 'inline-flex';
+        tag.textContent = 'Entradas Agotadas';
+        card.classList.add('is-soldout');
+        if(heroBtn) heroBtn.style.display = 'none';
+      }
+    }
+    checkSoldout();
+    setInterval(checkSoldout, 30000);
   })();
 
   // Mobile: first tap shows overlay, second tap navigates
