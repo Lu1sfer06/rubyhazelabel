@@ -1972,6 +1972,13 @@
     }
     checkSoldout();
     setInterval(checkSoldout, 30000);
+
+    // Con sold out, el flyer deja de ser clickeable — no debe llevar a
+    // ninguna parte. Va en fase de captura para ganarle a cualquier otro
+    // listener (como el de "doble tap" en móvil de más abajo).
+    card.addEventListener('click', function(e){
+      if(card.classList.contains('is-soldout')) e.preventDefault();
+    }, true);
   })();
 
   // Mobile: first tap shows overlay, second tap navigates
