@@ -202,7 +202,10 @@ function registerIssuedTicket(code, { transactionId, cardholderName, document, q
     phoneNumber: phoneNumber || '',
     promotorCode: promotorCode || '',
     createdAt: new Date().toISOString(),
-    entriesApproved: quantity,
+    // Arranca en 0: es cuánta gente YA entró, no cuánta cabe. Se va sumando
+    // en /api/tickets/approve cada vez que el escáner deja pasar a alguien
+    // — si arrancara en `quantity`, el ticket nacería mostrando "ya usado".
+    entriesApproved: 0,
     usedAt: null
   };
   saveIssuedTickets();
