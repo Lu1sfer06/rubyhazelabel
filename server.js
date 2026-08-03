@@ -1451,7 +1451,13 @@ app.get('/api/admin/event-day', requireAdminKey, (req, res) => {
   const all = Object.values(issuedTickets);
   const totalTickets = all.filter(t => !t.disabled).reduce((s, t) => s + (t.quantity || 1), 0);
   const scanned = all.filter(t => t.usedAt);
-  const entered = scanned.length;
+  // "entered" tiene que ser PERSONAS que entraron, no tickets escaneados —
+  // un ticket grupal escaneado una vez puede haber dejado entrar solo a
+  // parte del grupo (entriesApproved < quantity), así que contar tickets
+  // (scanned.length) inflaba/no cuadraba contra totalTickets (que sí suma
+  // personas). Antes esto hacía que el % y el contador de la pestaña
+  // "Día del Evento" no cuadraran con la realidad.
+  const entered = all.reduce((s, t) => s + (t.entriesApproved || 0), 0);
   const byHour = {};
   scanned.forEach(t => {
     const h = new Date(t.usedAt).getHours();
@@ -1460,7 +1466,7 @@ app.get('/api/admin/event-day', requireAdminKey, (req, res) => {
   const recent = [...scanned]
     .sort((a, b) => new Date(b.usedAt) - new Date(a.usedAt))
     .slice(0, 30)
-    .map(t => ({ name: t.cardholderName || '—', usedAt: t.usedAt, listNumber: t.listNumber, quantity: t.quantity || 1 }));
+    .map(t => ({ name: t.cardholderName || '—', usedAt: t.usedAt, listNumber: t.listNumber, quantity: t.quantity || 1, entriesApproved: t.entriesApproved || 0 }));
   res.json({ totalTickets, entered, byHour, recent });
 });
 

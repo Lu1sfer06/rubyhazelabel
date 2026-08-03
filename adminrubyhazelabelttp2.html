@@ -2288,7 +2288,7 @@
           <div class="ev-feed-avatar">${initials}</div>
           <div>
             <div class="ev-feed-name">${r.name}</div>
-            <div class="ev-feed-time">${time} · ${r.quantity > 1 ? r.quantity + ' entradas' : '1 entrada'}</div>
+            <div class="ev-feed-time">${time} · ${r.entriesApproved} de ${r.quantity} entrada${r.quantity > 1 ? 's' : ''}</div>
           </div>
         </div>`;
       }).join('');
