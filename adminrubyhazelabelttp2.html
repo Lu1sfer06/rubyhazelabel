@@ -1141,7 +1141,7 @@
   function fmtDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
-    return d.toLocaleDateString('es-EC') + ' · ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' }) + ' · ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guayaquil' });
   }
 
   function renderAll() {
@@ -1162,7 +1162,7 @@
 
     const now = new Date();
     document.getElementById('updated-time').textContent =
-      `Actualizado: ${now.toLocaleDateString('es-EC')} · ${now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}`;
+      `Actualizado: ${now.toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' })} · ${now.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guayaquil' })}`;
   }
 
   async function refreshAll(btn) {
@@ -1427,8 +1427,8 @@
     ctx.font = '800 22px Arial';
     ctx.fillText('Promotores Room', 40, 62);
     const now = new Date();
-    const fechaStr = now.toLocaleDateString('es-EC', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    const horaStr = now.toLocaleTimeString('es-EC', { hour:'2-digit', minute:'2-digit' });
+    const fechaStr = now.toLocaleDateString('es-EC', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone: 'America/Guayaquil' });
+    const horaStr = now.toLocaleTimeString('es-EC', { hour:'2-digit', minute:'2-digit', timeZone: 'America/Guayaquil' });
     ctx.fillStyle = '#555';
     ctx.font = '400 12px Arial';
     ctx.fillText(`${fechaStr}  ·  ${horaStr}`, 40, 80);
@@ -1851,7 +1851,7 @@
   function tkFmtDate(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
-    return d.toLocaleDateString('es-EC') + ' ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' }) + ' ' + d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guayaquil' });
   }
 
   function tkRenderTab(tab) {
@@ -2265,7 +2265,7 @@
       const data = await res.json();
       renderEventDay(data);
       document.getElementById('ev-last-refresh').textContent =
-        'Actualizado: ' + new Date().toLocaleTimeString('es-EC', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        'Actualizado: ' + new Date().toLocaleTimeString('es-EC', { hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone: 'America/Guayaquil' });
     } catch(e) { console.error('event-day error', e); }
   }
 
@@ -2283,7 +2283,7 @@
     } else {
       feedEl.innerHTML = recent.map(r => {
         const initials = (r.name || '?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
-        const time = new Date(r.usedAt).toLocaleTimeString('es-EC', { hour:'2-digit', minute:'2-digit' });
+        const time = new Date(r.usedAt).toLocaleTimeString('es-EC', { hour:'2-digit', minute:'2-digit', timeZone: 'America/Guayaquil' });
         return `<div class="ev-feed-item">
           <div class="ev-feed-avatar">${initials}</div>
           <div>
