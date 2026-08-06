@@ -695,6 +695,9 @@ async function payphoneConfirmWithRetries(payload, maxAttempts = 4) {
 }
 
 app.get(['/promotor', '/promotor.html', '/promotores.html', '/promotores-preview.html'], (req, res) => res.status(404).end());
+// Evento ya pasó (01 ago): venta de entradas y escáner de puerta dados de baja.
+// El admin (adminrubyhazelabelttp2) sigue activo para consultar el historial de ventas.
+app.get(['/ticketsTHETRIBEPTII', '/ticketsTHETRIBEPTII.html', '/entradaenpuerta', '/entradaenpuerta.html', '/scan2026agostoTTPT2', '/scan2026agostoTTPT2.html'], (req, res) => res.status(404).end());
 app.use(express.static(__dirname, { extensions: ['html'] }));
 app.use(express.json());
 
