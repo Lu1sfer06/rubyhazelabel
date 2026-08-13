@@ -185,37 +185,13 @@
   }
 
   .hero-logo{
-    display: block;
-    line-height: 0;
+    width: min(410px, 44vw);
+    height: min(160px, 19vh);
   }
 
   .hero-logo img{
-    height: clamp(60px, 10vw, 120px);
-    width: auto;
-    display: block;
     object-fit: contain;
-  }
-
-  .hero-tribe-title{
-    font-size: clamp(4rem, 11vw, 8.5rem);
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #dbce44;
-    text-align: center;
-    line-height: 0.95;
-    margin: 6px 0 0;
-    font-family: 'Google Sans Flex', sans-serif;
-  }
-
-  .hero-tribe-ft{
-    font-size: clamp(0.85rem, 2.8vw, 1.75rem);
-    font-weight: 300;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.72);
-    text-align: center;
-    margin: 6px 0 24px;
+    filter: drop-shadow(0 2px 14px rgba(0,0,0,0.45));
   }
 
   .scroll-cue{
@@ -361,9 +337,9 @@
 
   .past-events-grid{
     display:grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 28px;
-    max-width: 900px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1280px;
     margin: 0 auto;
   }
 
@@ -371,11 +347,11 @@
 
   .past-events-track{
     display:flex;
-    width: 200%;
+    width: 300%;
   }
 
   .past-events-track .placeholder{
-    flex: 0 0 25%;
+    flex: 0 0 16.6667%;
     aspect-ratio: 4/5;
     border: none;
     border-radius: 2px;
@@ -471,7 +447,7 @@
   }
 
   .releases-track .placeholder{
-    flex: 0 0 7.1429%;
+    flex: 0 0 8.5%;
     aspect-ratio: 1/1;
     border: none;
     border-radius: 0;
@@ -506,78 +482,6 @@
 
   .releases-track .placeholder:hover .listen-overlay{
     opacity: 1;
-  }
-
-  .new-release-card{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 19%;
-    aspect-ratio: 1/1;
-    z-index: 10;
-    border: 1px solid var(--red);
-    border-radius: 4px;
-    box-shadow: 0 22px 48px rgba(162,3,26,0.35);
-    transition: transform 0.35s ease, box-shadow 0.35s ease;
-  }
-
-  .new-release-card:hover{
-    transform: translate(-50%, -50%) scale(1.08);
-    box-shadow: 0 28px 56px rgba(162,3,26,0.45);
-  }
-
-  .new-release-card img{
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 3px;
-    display: block;
-  }
-
-  .new-release-card .listen-overlay{
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(60,60,60,0.4);
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    border-radius: 3px;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-  }
-
-  .new-release-card:hover .listen-overlay{
-    opacity: 1;
-  }
-
-  .new-release-tag{
-    position: absolute;
-    top: -11px;
-    left: 50%;
-    z-index: 2;
-    transform: translateX(-50%);
-    background: linear-gradient(90deg, var(--red-dark) 0%, #ff5a76 50%, var(--red-dark) 100%);
-    background-size: 220% 100%;
-    color: #fff;
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 2px;
-    white-space: nowrap;
-    animation: shimmer 2.6s linear infinite, tagGlow 2.6s ease-in-out infinite;
-  }
-
-  @keyframes tagGlow{
-    0%, 100%{ box-shadow: 0 0 6px rgba(162,3,26,0.4); }
-    50%{ box-shadow: 0 0 16px rgba(162,3,26,0.9); }
   }
 
   @keyframes tagGlowYellow{
@@ -648,73 +552,6 @@
 
   .radioshows-track .placeholder:hover .listen-overlay{
     opacity: 1;
-  }
-
-  .latest-show-card{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    height: 380px;
-    aspect-ratio: 4/5;
-    z-index: 10;
-    border: 1px solid var(--red);
-    border-radius: 4px;
-    box-shadow: 0 22px 48px rgba(162,3,26,0.35);
-    transition: transform 0.35s ease, box-shadow 0.35s ease;
-  }
-
-  .latest-show-card:hover{
-    transform: translate(-50%, -50%) scale(1.08);
-    box-shadow: 0 28px 56px rgba(162,3,26,0.45);
-  }
-
-  .latest-show-card img{
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 3px;
-    display: block;
-  }
-
-  .latest-show-card .listen-overlay{
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(60,60,60,0.4);
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    border-radius: 3px;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-  }
-
-  .latest-show-card:hover .listen-overlay{
-    opacity: 1;
-  }
-
-  .latest-show-tag{
-    position: absolute;
-    top: -11px;
-    left: 50%;
-    z-index: 2;
-    transform: translateX(-50%);
-    background: linear-gradient(90deg, var(--red-dark) 0%, #ff5a76 50%, var(--red-dark) 100%);
-    background-size: 220% 100%;
-    color: #fff;
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 2px;
-    white-space: nowrap;
-    animation: shimmer 2.6s linear infinite, tagGlow 2.6s ease-in-out infinite;
   }
 
   /* MERCH */
@@ -1020,6 +857,31 @@
 
   form button:disabled{ opacity: 0.6; cursor: not-allowed; }
 
+  .consent-check{
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .consent-check input[type="checkbox"]{
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    accent-color: var(--red);
+    cursor: pointer;
+  }
+
+  .consent-check span{
+    font-size: 0.82rem;
+    font-weight: 300;
+    color: var(--red-dim);
+    line-height: 1.5;
+  }
+
+  .consent-check a{ color: var(--red); text-decoration: underline; }
+
   .form-status{
     display: none;
     max-width: 560px;
@@ -1112,19 +974,15 @@
     #gallery{ padding-bottom: 18px; }
     #releases{ padding: 32px 0 80px; }
     .releases-row{ padding: 10px 0; }
-    .releases-track .placeholder{ flex: 0 0 19%; }
-    .new-release-card{ width: 24%; }
+    .releases-track .placeholder{ flex: 0 0 22%; }
     #radio-shows{ padding: 34px 0 45px; }
     .radioshows-row{ padding: 10px 0; }
     .radioshows-track .placeholder{ height: 430px; }
-    .latest-show-card{ height: 295px; }
     .video-play-btn{ width: 56px; height: 56px; }
     .video-play-btn::before{ border-width: 9px 0 9px 15px; }
   }
 
   @media (max-width: 560px){
-    .hero-tribe-ft{ font-size: clamp(1rem, 4vw, 1.4rem); font-weight: 400; }
-    .hero-logo img{ height: clamp(90px, 22vw, 160px); }
     .hero-overlay{ padding-top: 6%; }
     .events-grid{ grid-template-columns: 1fr; }
     section:not(.hero){ padding: 90px 6%; }
@@ -1147,14 +1005,10 @@
     .gallery-track .placeholder{ flex: 0 0 30%; }
     #releases{ padding: 24px 0 60px; }
     .releases-row{ padding: 8px 0; }
-    .releases-track .placeholder{ flex: 0 0 32%; }
-    .new-release-card{ width: 40%; }
-    .new-release-tag{ font-size: 0.55rem; padding: 3px 9px; }
+    .releases-track .placeholder{ flex: 0 0 36%; }
     #radio-shows{ padding: 24px 0 35px; }
     .radioshows-row{ padding: 8px 0; }
     .radioshows-track .placeholder{ height: 300px; }
-    .latest-show-card{ height: 195px; }
-    .latest-show-tag{ font-size: 0.55rem; padding: 3px 9px; }
     form button{ align-self: stretch; text-align: center; }
     .past-events-grid{ display:none; }
     .past-events-marquee{
@@ -1167,7 +1021,7 @@
       touch-action: pan-y;
     }
     .past-events-marquee.dragging{ cursor: grabbing; }
-    .past-events-track .placeholder{ flex: 0 0 32%; }
+    .past-events-track .placeholder{ flex: 0 0 30%; }
   }
 
   /* TRIBE EVENT BANNER */
@@ -1333,28 +1187,6 @@
   }
 
 
-  /* HERO VIDEO */
-  .hero-bg-vid{
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 30%;
-    z-index: 0;
-    transform: scale(1.04);
-    transform-origin: center center;
-  }
-
-  .hero-bg-dim{
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.52);
-    z-index: 1;
-  }
-
-  .hero-overlay{ z-index: 2; }
-
   /* HERO EVENT BAR */
   .hero-event-bar{
     position: absolute;
@@ -1395,68 +1227,9 @@
     white-space: nowrap;
   }
 
-  .hero-countdown{
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 36px;
-  }
-
-  .cd-unit{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-  }
-
-  .hero-countdown b{
-    font-size: clamp(2.2rem, 5.5vw, 3.8rem);
-    font-weight: 900;
-    line-height: 1;
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .hero-countdown small{
-    font-size: 0.58rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.48);
-    font-weight: 700;
-  }
-
-  .cd-sep{
-    font-size: 2.2rem;
-    color: rgba(219,206,68,0.85);
-    font-weight: 900;
-    line-height: 1.1;
-  }
-
-  .hero-tickets-btn{
-    display: inline-block;
-    background: #dbce44;
-    color: #000;
-    font-size: 0.67rem;
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    padding: 11px 22px;
-    border-radius: 2px;
-    text-decoration: none;
-    transition: background 0.25s, transform 0.25s;
-    white-space: nowrap;
-    box-shadow: 0 4px 18px rgba(219,206,68,0.45);
-  }
-
-  .hero-tickets-btn:hover{
-    background: #c4b83c;
-    transform: scale(1.04);
-  }
-
   @media (max-width: 560px){
     .hero-event-bar{ gap: 12px; padding: 18px 5% 26px; }
     .hero-event-name{ display: none; }
-    .hero-countdown{ gap: 8px; }
   }
 </style>
 </head>
@@ -1482,23 +1255,11 @@
 <div class="flyer-zoom" id="flyerZoom"><img id="flyerZoomImg" src="" alt="Flyer"></div>
 
 <section class="hero" id="home">
-  <video class="hero-bg-vid" autoplay muted loop playsinline preload="auto" src="eventos/gustavito-hero.mp4"></video>
-  <div class="hero-bg-dim"></div>
+  <div class="placeholder"><img src="assets/fondo.jpg" alt="Ruby Haze"></div>
   <div class="hero-overlay">
-    <div class="hero-logo"><img src="eventos/rubyhazrcompleto%20blanco.png" alt="Ruby Haze"></div>
-    <h2 class="hero-tribe-title">The Tribe PT.II</h2>
-    <p class="hero-tribe-ft">Ft. Gustavo Pico</p>
-    <div class="hero-countdown">
-      <div class="cd-unit"><b id="cdDays">--</b><small>DÍAS</small></div>
-      <span class="cd-sep">·</span>
-      <div class="cd-unit"><b id="cdHours">--</b><small>HRS</small></div>
-      <span class="cd-sep">·</span>
-      <div class="cd-unit"><b id="cdMins">--</b><small>MIN</small></div>
-      <span class="cd-sep">·</span>
-      <div class="cd-unit"><b id="cdSecs">--</b><small>SEG</small></div>
-    </div>
-    <a class="hero-tickets-btn" id="heroTicketsBtn" href="#events">Preventas Acaba Hoy 5PM ↓</a>
+    <div class="hero-logo placeholder"><img src="assets/hero-blanco.png" alt="Ruby Haze"></div>
   </div>
+  <div class="scroll-cue">Desliza ↓</div>
 </section>
 
 <section id="label">
@@ -1524,6 +1285,7 @@
         <a href="https://tr.ee/42RaITuGUH" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/oh%20vex.png" alt="Oh Vex"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZ002" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/wish%20you%20well.png" alt="Wish You Well"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://tr.ee/y43yZxNQOV" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/ibiza.png" alt="Ibiza"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/pid8Zmlney" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/my%20eyes%20on%20you%20last%20release.png" alt="My Eyes On You"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZ003" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/blla.png" alt="Blla"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://tr.ee/mAzPHp5x4f" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/feel%20real.jpg" alt="Feel Real"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZ001" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/i%20need%20your%20love.png" alt="I Need Your Love"><span class="listen-overlay">Listen Now</span></a>
@@ -1531,13 +1293,9 @@
         <a href="https://tr.ee/42RaITuGUH" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/oh%20vex.png" alt="Oh Vex"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZ002" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/wish%20you%20well.png" alt="Wish You Well"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://tr.ee/y43yZxNQOV" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/ibiza.png" alt="Ibiza"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://tr.ee/pid8Zmlney" target="_blank" rel="noopener" class="placeholder"><img src="assets/music/my%20eyes%20on%20you%20last%20release.png" alt="My Eyes On You"><span class="listen-overlay">Listen Now</span></a>
       </div>
     </div>
-    <a href="https://tr.ee/pid8Zmlney" target="_blank" rel="noopener" class="new-release-card">
-      <span class="new-release-tag">New Release</span>
-      <img src="assets/music/my%20eyes%20on%20you%20last%20release.png" alt="My Eyes On You — New Release">
-      <span class="listen-overlay">Listen Now</span>
-    </a>
   </div>
 </section>
 
@@ -1549,14 +1307,17 @@
   <div class="past-events-grid">
     <div class="event-card placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
     <div class="event-card placeholder"><img src="assets/evento-2.png" alt="Evento"></div>
+    <div class="event-card placeholder"><img src="assets/evento-gustavo.jpg" alt="The Tribe PT.II — Ft. Gustavo Pico"></div>
   </div>
 
   <div class="past-events-marquee">
     <div class="past-events-track" id="pastEventsTrack">
       <div class="placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
       <div class="placeholder"><img src="assets/evento-2.png" alt="Evento"></div>
+      <div class="placeholder"><img src="assets/evento-gustavo.jpg" alt="The Tribe PT.II — Ft. Gustavo Pico"></div>
       <div class="placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
       <div class="placeholder"><img src="assets/evento-2.png" alt="Evento"></div>
+      <div class="placeholder"><img src="assets/evento-gustavo.jpg" alt="The Tribe PT.II — Ft. Gustavo Pico"></div>
     </div>
   </div>
 </section>
@@ -1574,6 +1335,7 @@
         <a href="https://fanlink.tv/RHZRS006" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show6.jpg" alt="Radio Show 6"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS007" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show7.jpg" alt="Radio Show 7"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS008" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow8.jpg" alt="Radio Show 8"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS009" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow9%20last%20release.jpg" alt="Radio Show 9"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS001" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow1.jpg" alt="Radio Show 1"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS002" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show%202.jpg" alt="Radio Show 2"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS003" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow3.jpg" alt="Radio Show 3"><span class="listen-overlay">Listen Now</span></a>
@@ -1582,13 +1344,9 @@
         <a href="https://fanlink.tv/RHZRS006" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show6.jpg" alt="Radio Show 6"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS007" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radio%20show7.jpg" alt="Radio Show 7"><span class="listen-overlay">Listen Now</span></a>
         <a href="https://fanlink.tv/RHZRS008" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow8.jpg" alt="Radio Show 8"><span class="listen-overlay">Listen Now</span></a>
+        <a href="https://fanlink.tv/RHZRS009" target="_blank" rel="noopener" class="placeholder"><img src="assets/radio-shows/radioshow9%20last%20release.jpg" alt="Radio Show 9"><span class="listen-overlay">Listen Now</span></a>
       </div>
     </div>
-    <a href="https://fanlink.tv/RHZRS009" target="_blank" rel="noopener" class="latest-show-card">
-      <span class="latest-show-tag">Latest Episode</span>
-      <img src="assets/radio-shows/radioshow9%20last%20release.jpg" alt="Radio Show 9 — New Episode">
-      <span class="listen-overlay">Listen Now</span>
-    </a>
   </div>
 </section>
 
@@ -1689,6 +1447,10 @@
         <option value="otro">Otro</option>
       </select>
       <textarea name="message" rows="4" placeholder="Cuéntanos más"></textarea>
+      <label class="consent-check">
+        <input type="checkbox" name="consent" required>
+        <span>He leído y acepto la <a href="privacidad.html" target="_blank" rel="noopener">Política de Privacidad</a>.</span>
+      </label>
       <input type="hidden" name="access_key" value="6da871fd-2211-4b44-a3b8-1258cf288fdd">
       <input type="hidden" name="subject" value="Nuevo mensaje desde rubyhazemusic.com">
       <input type="hidden" name="from_name" value="Ruby Haze — Formulario web">
@@ -1907,28 +1669,6 @@
   initDragMarquee('.past-events-marquee', '.past-events-track', 18000, { reverse: true });
   initDragMarquee('#galleryRow1', '.gallery-track-1', 70000, { reverse: true, touchOnly: true });
   initDragMarquee('#galleryRow2', '.gallery-track-2', 70000, { touchOnly: true });
-
-  // Countdown — The Tribe PT.II, Sábado 01 Ago 2026, 9PM Ecuador (UTC-5)
-  (function(){
-    const target = new Date('2026-08-01T21:00:00-05:00');
-    const dEl = document.getElementById('cdDays');
-    const hEl = document.getElementById('cdHours');
-    const mEl = document.getElementById('cdMins');
-    const sEl = document.getElementById('cdSecs');
-    function tick(){
-      const diff = target - Date.now();
-      if(diff <= 0){
-        dEl.textContent = hEl.textContent = mEl.textContent = sEl.textContent = '00';
-        return;
-      }
-      dEl.textContent = String(Math.floor(diff / 86400000)).padStart(2,'0');
-      hEl.textContent = String(Math.floor(diff % 86400000 / 3600000)).padStart(2,'0');
-      mEl.textContent = String(Math.floor(diff % 3600000 / 60000)).padStart(2,'0');
-      sEl.textContent = String(Math.floor(diff % 60000 / 1000)).padStart(2,'0');
-    }
-    tick();
-    setInterval(tick, 1000);
-  })();
 
   // A las 7PM del día del evento (hora Ecuador, UTC-5): se muestra el sello
   // "Sold Out" sobre el flyer y cambia la etiqueta, sin tocar el contador.
