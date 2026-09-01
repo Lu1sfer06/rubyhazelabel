@@ -6,10 +6,28 @@
 <title>Ruby Haze | Record Label</title>
 <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 <link rel="icon" type="image/png" href="assets/favicon-source.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@200;300;400;600;800;900&display=swap" rel="stylesheet">
 <style>
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-TextLight-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 300; font-display: swap;
+  }
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-Regular-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 400; font-display: swap;
+  }
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-Medium-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 500; font-display: swap;
+  }
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-Bold-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 700; font-display: swap;
+  }
+
   :root{
     --bg: #ffffff;
     --bg-soft: #fafafa;
@@ -26,14 +44,14 @@
   body{
     background: var(--bg);
     color: var(--red);
-    font-family: 'Google Sans Flex', sans-serif;
+    font-family: 'Ruby Haze Core', sans-serif;
     font-weight: 300;
     overflow-x: hidden;
   }
 
   h1,h2,h3{
-    font-family: 'Google Sans Flex', sans-serif;
-    font-weight: 900;
+    font-family: 'Ruby Haze Core', sans-serif;
+    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--red);
@@ -50,7 +68,7 @@
     text-align:center;
     color: var(--red-dim);
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     overflow: hidden;
@@ -98,7 +116,7 @@
 
   nav a{
     font-size: 0.78rem;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     transition: color 0.25s;
@@ -235,7 +253,7 @@
   }
 
   #label p{
-    font-weight: 200;
+    font-weight: 300;
     font-size: clamp(1.1rem, 2.2vw, 1.6rem);
     line-height: 1.7;
     text-align: justify;
@@ -299,7 +317,7 @@
   }
 
   .tease-text .tease-line{
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-size: clamp(1rem, 2.4vw, 1.4rem);
@@ -307,7 +325,7 @@
   }
 
   .tease-text .tease-main{
-    font-weight: 900;
+    font-weight: 700;
     font-size: clamp(1.8rem, 5vw, 3.4rem);
     letter-spacing: 0.08em;
     background: linear-gradient(90deg, var(--red) 0%, rgba(162,3,26,0.35) 50%, var(--red) 100%);
@@ -607,7 +625,7 @@
     color: #fff;
     text-align: center;
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     padding: 8px 0;
@@ -646,7 +664,7 @@
     right: 0;
     transform: translateY(-50%);
     font-size: 0.6rem;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.28em;
     text-transform: uppercase;
     color: #fff;
@@ -700,7 +718,7 @@
   .merch-item h3{
     margin-top: 16px;
     font-size: 1rem;
-    font-weight: 800;
+    font-weight: 700;
   }
 
   .sold-out-title{
@@ -823,7 +841,7 @@
     border: none;
     border-bottom: 1px solid var(--line);
     color: var(--red);
-    font-family: 'Google Sans Flex', sans-serif;
+    font-family: 'Ruby Haze Core', sans-serif;
     font-weight: 300;
     font-size: 0.95rem;
     padding: 12px 4px;
@@ -845,7 +863,7 @@
     color: #fff;
     border: none;
     padding: 16px 38px;
-    font-weight: 800;
+    font-weight: 700;
     font-size: 0.8rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -1057,7 +1075,7 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    font-weight: 900;
+    font-weight: 700;
     font-size: clamp(1.2rem, 3.5vw, 2rem);
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -1108,7 +1126,7 @@
     background-size: 220% 100%;
     color: #000;
     font-size: 0.48rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     padding: 4px 12px;
@@ -1133,7 +1151,7 @@
     background: rgba(20,0,2,0.88);
     color: #fff;
     text-align: center;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.24em;
     text-transform: uppercase;
     font-size: clamp(1.3rem, 5vw, 2.4rem);
@@ -1209,7 +1227,7 @@
   }
 
   .hero-event-main{
-    font-weight: 900;
+    font-weight: 700;
     font-size: clamp(0.85rem, 1.8vw, 1.05rem);
     letter-spacing: 0.22em;
     text-transform: uppercase;
