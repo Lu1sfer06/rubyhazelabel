@@ -35,6 +35,7 @@
     --red: #a2031a;
     --red-dim: rgba(162,3,26,0.55);
     --red-dark: #7a0214;
+    --text: #1a1a1a;
   }
 
   *{ box-sizing: border-box; margin:0; padding:0; }
@@ -270,6 +271,7 @@
     line-height: 1.7;
     text-align: justify;
     text-justify: inter-word;
+    color: var(--text);
   }
 
   #label p strong{ font-weight: 700; letter-spacing: 0.04em; word-spacing: 0.15em; }
@@ -1287,7 +1289,7 @@
 <section class="hero" id="home">
   <div class="placeholder"><img src="assets/fondo.jpg" alt="Ruby Haze"></div>
   <div class="hero-overlay">
-    <div class="hero-logo placeholder"><img src="assets/hero-logo-blanco.png" alt="Ruby Haze"></div>
+    <div class="hero-logo placeholder"><img src="assets/hero-logo-rojo.png" alt="Ruby Haze"></div>
   </div>
   <div class="scroll-cue">Desliza<span class="scroll-arrow" aria-hidden="true"></span></div>
 </section>
@@ -1420,25 +1422,41 @@
   <div class="gallery-row" id="galleryRow1">
     <div class="gallery-track gallery-track-1">
       <div class="placeholder"><img src="assets/foto-3.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-9.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-1.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-11.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-6.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-13.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-7.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-15.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-3.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-9.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-1.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-11.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-6.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-13.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-7.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-15.jpg" alt=""></div>
     </div>
   </div>
   <div class="gallery-row" id="galleryRow2">
     <div class="gallery-track gallery-track-2">
       <div class="placeholder"><img src="assets/foto-2.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-10.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-5.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-12.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-8.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-14.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-4.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-16.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-2.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-10.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-5.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-12.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-8.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-14.jpg" alt=""></div>
       <div class="placeholder"><img src="assets/foto-4.jpg" alt=""></div>
+      <div class="placeholder"><img src="assets/foto-16.jpg" alt=""></div>
     </div>
   </div>
 </section>
@@ -1698,8 +1716,8 @@
   initDragMarquee('.releases-row', '.releases-track', 65000);
   initDragMarquee('.radioshows-row', '.radioshows-track', 65000);
   initDragMarquee('.past-events-marquee', '.past-events-track', 18000, { reverse: true });
-  initDragMarquee('#galleryRow1', '.gallery-track-1', 70000, { reverse: true, touchOnly: true });
-  initDragMarquee('#galleryRow2', '.gallery-track-2', 70000, { touchOnly: true });
+  initDragMarquee('#galleryRow1', '.gallery-track-1', 140000, { reverse: true, touchOnly: true });
+  initDragMarquee('#galleryRow2', '.gallery-track-2', 140000, { touchOnly: true });
 
   // A las 7PM del día del evento (hora Ecuador, UTC-5): se muestra el sello
   // "Sold Out" sobre el flyer y cambia la etiqueta, sin tocar el contador.
