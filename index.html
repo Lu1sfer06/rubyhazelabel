@@ -203,8 +203,8 @@
   }
 
   .hero-logo{
-    width: min(410px, 44vw);
-    height: min(160px, 19vh);
+    width: min(560px, 78vw);
+    height: min(104px, 15vh);
   }
 
   .hero-logo img{
@@ -217,10 +217,22 @@
     bottom: 28px;
     left:50%;
     transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-size: 0.7rem;
     letter-spacing: 0.15em;
     color: var(--red-dim);
     text-transform: uppercase;
+  }
+
+  .scroll-arrow{
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    margin-top: -3px;
   }
 
   /* SECTIONS */
@@ -260,7 +272,7 @@
     text-justify: inter-word;
   }
 
-  #label p strong{ font-weight: 700; }
+  #label p strong{ font-weight: 700; letter-spacing: 0.04em; word-spacing: 0.15em; }
 
   /* EVENTOS */
   #events{ padding-top: 70px; padding-bottom: 50px; }
@@ -1275,20 +1287,19 @@
 <section class="hero" id="home">
   <div class="placeholder"><img src="assets/fondo.jpg" alt="Ruby Haze"></div>
   <div class="hero-overlay">
-    <div class="hero-logo placeholder"><img src="assets/hero-blanco.png" alt="Ruby Haze"></div>
+    <div class="hero-logo placeholder"><img src="assets/hero-logo-blanco.png" alt="Ruby Haze"></div>
   </div>
-  <div class="scroll-cue">Desliza ↓</div>
+  <div class="scroll-cue">Desliza<span class="scroll-arrow" aria-hidden="true"></span></div>
 </section>
 
 <section id="label">
   <div class="band-inner">
     <h2 class="section-title">Acerca de Nosotros</h2>
     <p>
-      <strong>Ruby Haze</strong> es un sello discográfico y plataforma creativa donde la música se cruza
-      con distintas formas de expresión. Nace en 2023 de la idea de reunir a personas que encuentran
-      valor en lo diferente y comparten una manera particular de ver el mundo.
-      Es un espacio para crear, colaborar y construir una identidad propia alrededor del misterio,
-      la energía, la libertad y esa rareza que nos hace únicos.
+      <strong>RUBY HAZE</strong> es un sello discográfico y plataforma creativa donde la música se cruza
+      con otras formas de expresión. Nació en 2023 para reunir a quienes encuentran valor en lo diferente
+      y comparten una manera particular de ver el mundo — un espacio para crear, colaborar y construir
+      una identidad propia alrededor del misterio, la energía, la libertad y esa rareza que nos distingue.
     </p>
   </div>
 </section>
@@ -1322,7 +1333,7 @@
 <section id="events">
   <h2 class="section-title">Eventos</h2>
 
-  <p class="past-events-label">Past Events</p>
+  <p class="past-events-label">Eventos Anteriores</p>
 
   <div class="past-events-grid">
     <div class="event-card placeholder"><img src="assets/evento-1.jpg" alt="Evento"></div>
