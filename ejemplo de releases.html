@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ejemplo de Releases — Ruby Haze</title>
+<style>
+
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-TextLight-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 300; font-display: swap;
+  }
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-Regular-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 400; font-display: swap;
+  }
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-Medium-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 500; font-display: swap;
+  }
+  @font-face{
+    font-family: 'Ruby Haze Core';
+    src: url('assets/fonts/RubyHazeCore-Bold-v1.6.woff2') format('woff2');
+    font-style: normal; font-weight: 700; font-display: swap;
+  }
+
+  :root{
+    --bg: #ffffff;
+    --bg-soft: #fafafa;
+    --line: rgba(162,3,26,0.15);
+    --red: #a2031a;
+    --red-dim: rgba(162,3,26,0.55);
+    --red-dark: #7a0214;
+    --text: #1a1a1a;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Ruby Haze Core', 'Helvetica Neue', Arial, sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 80px 20px;
+    gap: 46px;
+  }
+
+  .label{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    text-align:center;
+  }
+  .label .eyebrow{
+    font-size:12px;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    color: var(--red-dim);
+    font-weight:500;
+  }
+  .label h1{
+    margin:0;
+    font-size:clamp(28px, 4vw, 44px);
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .label h1 span{ color: var(--red); }
+
+  /* ---------- Shelf ---------- */
+
+  .shelf-viewport{
+    position:relative;
+    width:98vw;
+    max-width:1900px;
+    padding: 190px 0 120px;
+    overflow: visible;
+  }
+
+  .shelf-viewport::after{
+    content:'';
+    position:absolute;
+    left:3%; right:3%; bottom:76px;
+    height:48px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.24) 0%, rgba(0,0,0,0.08) 55%, transparent 80%);
+    filter: blur(7px);
+    z-index:0;
+  }
+
+  .shelf{
+    position:relative;
+    display:flex;
+    justify-content:center;
+    align-items:flex-end;
+    transform: rotateX(9deg);
+    transform-style: preserve-3d;
+    z-index:1;
+  }
+
+  /* perspective lives on EACH card (not the shared row) — a single shared
+     vanishing point made cards near the row's edges skew more than cards
+     near the center, so the two halves of the row didn't match. Giving
+     every card its own perspective() makes them all foreshorten identically
+     no matter where they sit in the row. */
+  .cd-case{
+    position:relative;
+    flex: 0 0 auto;
+    width: 24%;
+    aspect-ratio: 1 / 1;
+    margin-left: -13.6%;
+    transform-style: preserve-3d;
+    transform: perspective(1400px) rotateY(-45deg) rotateZ(-1.6deg);
+    transition: transform .45s cubic-bezier(.2,.8,.2,1), margin .45s cubic-bezier(.2,.8,.2,1), z-index 0s;
+    cursor: pointer;
+    text-decoration:none;
+  }
+  .cd-case:first-child{ margin-left:0; }
+
+  /* gentle horizontal fan instead of a steep diagonal cascade — everything stays around the same 45° angle */
+  .shelf .cd-case:nth-child(1){ transform: perspective(1400px) rotateY(-45deg) rotateZ(-1.6deg) translateY(3px); }
+  .shelf .cd-case:nth-child(2){ transform: perspective(1400px) rotateY(-45deg) rotateZ(-1deg)   translateY(1px); }
+  .shelf .cd-case:nth-child(3){ transform: perspective(1400px) rotateY(-45deg) rotateZ(-0.5deg) translateY(1px); }
+  .shelf .cd-case:nth-child(4){ transform: perspective(1400px) rotateY(-45deg) rotateZ(0deg)    translateY(0px); }
+  .shelf .cd-case:nth-child(5){ transform: perspective(1400px) rotateY(-45deg) rotateZ(0.5deg)  translateY(1px); }
+  .shelf .cd-case:nth-child(6){ transform: perspective(1400px) rotateY(-45deg) rotateZ(1deg)    translateY(1px); }
+  .shelf .cd-case:nth-child(7){ transform: perspective(1400px) rotateY(-45deg) rotateZ(1.6deg)  translateY(3px); }
+  .shelf .cd-case:nth-child(8){ transform: perspective(1400px) rotateY(-45deg) rotateZ(2.2deg)  translateY(5px); }
+
+  /* al pasar el mouse: se saca "para arriba" como un vinilo real de su funda —
+     sube, gira un poco sobre su propio eje y se acerca a cámara — nada de
+     scale() ni zoom, eso es lo que se sentía raro antes. */
+  .cd-case:hover{
+    z-index: 50 !important;
+    transform: perspective(1400px) rotateY(-38deg) rotateZ(-5deg) translateY(-90px) translateZ(50px) !important;
+  }
+
+  .cd-case .cover{
+    position:absolute;
+    inset:0;
+    border-radius: 5px;
+    overflow:hidden;
+    /* thickness shadow points toward the LEFT — the side that's actually
+       visible (the next case overlaps the right side), so the depth cue
+       lands where you can see it instead of hiding under the next cover */
+    box-shadow:
+      -16px 30px 46px rgba(0,0,0,0.38),
+      0 0 0 1.5px rgba(0,0,0,0.22),
+      inset 0 0 0 3px rgba(255,255,255,0.88);
+    background: var(--bg-soft);
+    transform: translateZ(32px);
+    transition: box-shadow .4s ease;
+  }
+  .cd-case:hover .cover{
+    box-shadow:
+      -16px 30px 46px rgba(0,0,0,0.38),
+      0 0 0 1.5px rgba(0,0,0,0.22),
+      inset 0 0 0 3px rgba(255,255,255,0.88),
+      0 0 56px rgba(162,3,26,0.28);
+  }
+  .cd-case .cover img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    transform: scale(var(--zoom, 1));
+    transition: transform .5s ease, filter .5s ease;
+  }
+  .cd-case:hover .cover img{
+    filter: brightness(1.04);
+  }
+
+  /* glossy plastic sheen over the cover */
+  .cd-case .sheen{
+    position:absolute; inset:0;
+    background: linear-gradient(115deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 22%, rgba(255,255,255,0) 78%, rgba(255,255,255,0.12) 100%);
+    pointer-events:none;
+    transform: translateZ(32.5px);
+  }
+
+  /* subtle, cool hover cue — no text block, just a soft glow + a tiny play glyph */
+  .cd-case .play-dot{
+    position:absolute;
+    right:22px; bottom:22px;
+    width:50px; height:50px;
+    border-radius:50%;
+    background: rgba(255,255,255,0.88);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    transform: translateZ(33px) scale(.75);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  .cd-case .play-dot::after{
+    content:'';
+    margin-left:3px;
+    width:0; height:0;
+    border-style:solid;
+    border-width:9px 0 9px 15px;
+    border-color: transparent transparent transparent var(--red);
+  }
+  .cd-case:hover .play-dot{
+    opacity:1;
+    transform: translateZ(33px) scale(1);
+  }
+
+  /* the disc — a black vinyl record (grooves, not a shiny CD). It lives
+     BEHIND the cover in real 3D depth (its translateZ stays lower than the
+     cover's), so when it slides out sideways only the half that clears the
+     cover's edge is actually visible — the other half stays truly tucked
+     behind, occluded by the cover itself, not just visually implied.
+     Only appears after lingering on hover for over a second; leaving
+     early hides it immediately (no delay on the way out). The label in
+     the center shows the cover's own art, compacted into the circle. */
+  .cd-case .disc{
+    position:absolute;
+    top:50%; left:50%;
+    width:92%;
+    height:92%;
+    border-radius:50%;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 38% 34%, rgba(255,255,255,0.16), rgba(255,255,255,0) 38%),
+      repeating-radial-gradient(circle at 50% 50%, #161616 0px, #161616 2px, #0a0a0a 3px, #161616 4px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.4);
+    opacity:0;
+    transform: translate(-50%,-50%) translateX(0%) translateZ(14px) scale(.92);
+    transition: opacity .5s ease, transform .5s ease;
+    transition-delay: 0s;
+  }
+  .cd-case .disc::before{
+    content:'';
+    position:absolute;
+    top:50%; left:50%;
+    width:34%; height:34%;
+    border-radius:50%;
+    background-color: var(--disc-color, var(--red-dark));
+    background-image: var(--disc-img);
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5) inset;
+    transform: translate(-50%,-50%);
+  }
+  .cd-case .disc::after{
+    content:'';
+    position:absolute;
+    top:50%; left:50%;
+    width:5%; height:5%;
+    border-radius:50%;
+    background: #0a0a0a;
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.4) inset;
+    transform: translate(-50%,-50%);
+  }
+  .cd-case:hover .disc{
+    opacity:1;
+    /* stays behind the cover (translateZ 24 < cover's 32) and only slides
+       out by roughly half its own width, so half stays hidden underneath */
+    transform: translate(-50%,-50%) translateX(42%) translateZ(24px) scale(1);
+    transition-delay: 1s;
+  }
+
+  .hint{
+    font-size:12px;
+    color: var(--red-dim);
+    letter-spacing:0.04em;
+  }
+
+  /* below ~900px covers scale down with the % sizing above (still fits,
+     no scrolling anywhere) — just trim padding and drop the play glyph,
+     which is too small to matter on a phone anyway. */
+  @media (max-width: 900px){
+    .shelf-viewport{ padding: 130px 12px 90px; }
+    .cd-case .play-dot{ display:none; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="label">
+    <span class="eyebrow">Ruby Haze</span>
+    <h1>Nuestros <span>Releases</span></h1>
+  </div>
+
+  <div class="shelf-viewport">
+    <div class="shelf" id="shelf"></div>
+  </div>
+
+  <span class="hint">pasa el mouse sobre una portada — versión de prueba</span>
+
+  <script>
+    // no zoom/crop — every cover shows its full, real artwork (title included).
+    // the covers are all close enough to square already; forcing a crop was the
+    // thing cutting the printed name off the white ones.
+    // order is interleaved on purpose — white-background covers (Blla, Just
+    // Like You, My Eyes On You, Oh Vex, Wish You Well) alternate with the
+    // full-color ones (Feel Real, I Need Your Love, Ibiza) so you never get
+    // a run of several white covers bunched together.
+    // discColor is the vinyl label's color — roughly the cover's own dominant
+    // color (the vinyl body itself always stays black, like a real record).
+    const covers = [
+      { file: 'blla.png', title: 'Blla', zoom: 1, discColor: '#f7f1e6' },
+      { file: 'feel real.jpg', title: 'Feel Real', zoom: 1, discColor: '#e9e2c9' },
+      { file: 'just liek you.png', title: 'Just Like You', zoom: 1, discColor: '#a2031a' },
+      { file: 'i need your love.png', title: 'I Need Your Love', zoom: 1, discColor: '#e8862c' },
+      { file: 'my eyes on you last release.png', title: 'My Eyes On You', zoom: 1, discColor: '#f2ede2' },
+      { file: 'ibiza-web.jpg', title: 'Ibiza', zoom: 1, discColor: '#a2031a' },
+      { file: 'oh vex.png', title: 'Oh Vex', zoom: 1, discColor: '#f2ede2' },
+      { file: 'wish you well.png', title: 'Wish You Well', zoom: 1, discColor: '#f2ede2' },
+    ];
+
+    const shelf = document.getElementById('shelf');
+
+    covers.forEach(({file, title, zoom, discColor}) => {
+      const a = document.createElement('a');
+      a.className = 'cd-case';
+      a.href = '#';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.innerHTML = `
+        <div class="disc" style="--disc-color:${discColor}; --disc-img:url('assets/music/${encodeURIComponent(file)}')"></div>
+        <div class="cover">
+          <img src="assets/music/${encodeURIComponent(file)}" alt="${title}" style="--zoom:${zoom}">
+          <div class="sheen"></div>
+          <span class="play-dot"></span>
+        </div>
+      `;
+      shelf.appendChild(a);
+    });
+  </script>
+
+</body>
+</html>
